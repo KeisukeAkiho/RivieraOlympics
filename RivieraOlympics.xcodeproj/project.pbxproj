@@ -1,0 +1,488 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0BEFF0BAF89BDDFDC72A7916 /* OfficialPDFPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */; };
+		19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE970B8B43B209F4616D085 /* RoundStore.swift */; };
+		1F8803693529894ADED0B1B8 /* HoleEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3481BBD078BF959BB6225F9C /* HoleEntryView.swift */; };
+		20BA1CEBCE759348AB1384D9 /* OlympicsRulesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */; };
+		251BD5AE886223FCB1D50F82 /* Rulebook.md in Resources */ = {isa = PBXBuildFile; fileRef = EDFED712CA110BA1EEFE1EBF /* Rulebook.md */; };
+		2752D8DE55A9D1CAFAA7D5BD /* PlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91518199FC77AFFE421985DC /* PlayersView.swift */; };
+		3026C650496E5A690B0151B2 /* NewRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */; };
+		3A5DDCA4E463417207D3D699 /* RivieraOlympicsRules.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */; };
+		517F8BA1955CF82BE019460D /* SettlementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */; };
+		59F770F61C05CB52A9B3ED71 /* RivieraOlympicsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C17FF4100446DAEAD3409DA4 /* RivieraOlympicsApp.swift */; };
+		5A403F5D7BAC312EA9E9BFAA /* SideGameCalculators.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B93FC98D0C255A56E6F10E4 /* SideGameCalculators.swift */; };
+		6615DF0FCED7B9A7391FBC97 /* RivieraTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E930C7299E7D803E2BFC2D5 /* RivieraTheme.swift */; };
+		8817EDA7DF2D5B435A8AE4F3 /* OtherRulesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18A1BE8FDBB9C2BC9666DC8 /* OtherRulesPage.swift */; };
+		90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */; };
+		92B8ACB930F1303AB764808A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19978D40D91470300263C170 /* RootView.swift */; };
+		9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */; };
+		97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */; };
+		A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F82B53000B816E362CA976D /* RulebookView.swift */; };
+		C716AF40CED1F542E5AB247B /* ScorecardTablesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */; };
+		D815E49FC1C4C5B3B262D044 /* OptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */; };
+		DF31A3CCFBC78D243771A3A5 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750305254EE4804FAA954C6F /* HomeView.swift */; };
+		E5B94FE90B7985A4B135CF23 /* OlympicsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512B674DC18FD0C3946CEE5C /* OlympicsCalculator.swift */; };
+		E9BA3704CEA1765C9370998F /* CompactHoleEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */; };
+		F0E024582B9FFA3370CB9595 /* GolfModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C3072A536E1644CB9F9489 /* GolfModels.swift */; };
+		FD64E5521C3EDC511E275931 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewRoundView.swift; sourceTree = "<group>"; };
+		17C3072A536E1644CB9F9489 /* GolfModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GolfModels.swift; sourceTree = "<group>"; };
+		19978D40D91470300263C170 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		1B93FC98D0C255A56E6F10E4 /* SideGameCalculators.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameCalculators.swift; sourceTree = "<group>"; };
+		2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3481BBD078BF959BB6225F9C /* HoleEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleEntryView.swift; sourceTree = "<group>"; };
+		3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulebookComponents.swift; sourceTree = "<group>"; };
+		4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicsRulesPage.swift; sourceTree = "<group>"; };
+		4E930C7299E7D803E2BFC2D5 /* RivieraTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivieraTheme.swift; sourceTree = "<group>"; };
+		512B674DC18FD0C3946CEE5C /* OlympicsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicsCalculator.swift; sourceTree = "<group>"; };
+		51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsView.swift; sourceTree = "<group>"; };
+		5F82B53000B816E362CA976D /* RulebookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulebookView.swift; sourceTree = "<group>"; };
+		61FF14B06B4C68DDD91C5B69 /* RivieraOlympics.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RivieraOlympics.entitlements; sourceTree = "<group>"; };
+		732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = RivieraOlympicsRules.pdf; sourceTree = "<group>"; };
+		750305254EE4804FAA954C6F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundDetailView.swift; sourceTree = "<group>"; };
+		91518199FC77AFFE421985DC /* PlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayersView.swift; sourceTree = "<group>"; };
+		962C80D94591DB7AEF63C3AF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialPDFPage.swift; sourceTree = "<group>"; };
+		A0EADB7BD2E24B53E8C0FFFC /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
+		A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactHoleEditors.swift; sourceTree = "<group>"; };
+		B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicsStatus.swift; sourceTree = "<group>"; };
+		C17FF4100446DAEAD3409DA4 /* RivieraOlympicsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivieraOlympicsApp.swift; sourceTree = "<group>"; };
+		CAE970B8B43B209F4616D085 /* RoundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundStore.swift; sourceTree = "<group>"; };
+		E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardTablesView.swift; sourceTree = "<group>"; };
+		ED01E767E44C45BC3CD300FF /* RivieraOlympics.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RivieraOlympics.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		EDFED712CA110BA1EEFE1EBF /* Rulebook.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Rulebook.md; sourceTree = "<group>"; };
+		F18A1BE8FDBB9C2BC9666DC8 /* OtherRulesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherRulesPage.swift; sourceTree = "<group>"; };
+		F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		064B5754D9F563ED65C75B65 /* RivieraOlympics */ = {
+			isa = PBXGroup;
+			children = (
+				2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */,
+				962C80D94591DB7AEF63C3AF /* Info.plist */,
+				61FF14B06B4C68DDD91C5B69 /* RivieraOlympics.entitlements */,
+				C17FF4100446DAEAD3409DA4 /* RivieraOlympicsApp.swift */,
+				ABF6C850E362B406AAD56DA7 /* Models */,
+				E9B98481D5E9317BEEBCE4FD /* Resources */,
+				9E06D524D366720C660A6E5B /* Services */,
+				44C82142CAEC8E3CCC6A3F1C /* Theme */,
+				5815167049EEF47CF399A3F0 /* Views */,
+			);
+			path = RivieraOlympics;
+			sourceTree = "<group>";
+		};
+		1085375D170CBF9DBB2103A6 /* Rulebook */ = {
+			isa = PBXGroup;
+			children = (
+				9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */,
+				4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */,
+				F18A1BE8FDBB9C2BC9666DC8 /* OtherRulesPage.swift */,
+				3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */,
+			);
+			path = Rulebook;
+			sourceTree = "<group>";
+		};
+		44C82142CAEC8E3CCC6A3F1C /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				4E930C7299E7D803E2BFC2D5 /* RivieraTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		5815167049EEF47CF399A3F0 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */,
+				3481BBD078BF959BB6225F9C /* HoleEntryView.swift */,
+				750305254EE4804FAA954C6F /* HomeView.swift */,
+				07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */,
+				51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */,
+				91518199FC77AFFE421985DC /* PlayersView.swift */,
+				19978D40D91470300263C170 /* RootView.swift */,
+				80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */,
+				5F82B53000B816E362CA976D /* RulebookView.swift */,
+				E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */,
+				F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */,
+				1085375D170CBF9DBB2103A6 /* Rulebook */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		9E06D524D366720C660A6E5B /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				512B674DC18FD0C3946CEE5C /* OlympicsCalculator.swift */,
+				B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */,
+				CAE970B8B43B209F4616D085 /* RoundStore.swift */,
+				1B93FC98D0C255A56E6F10E4 /* SideGameCalculators.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A8F2AF0A4D8F047866AF7922 = {
+			isa = PBXGroup;
+			children = (
+				D070A7E2AEB44CA48A912CE1 /* PogiApple */,
+				064B5754D9F563ED65C75B65 /* RivieraOlympics */,
+				BFB54941C70470D21AB44A4B /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		ABF6C850E362B406AAD56DA7 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				17C3072A536E1644CB9F9489 /* GolfModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		BFB54941C70470D21AB44A4B /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ED01E767E44C45BC3CD300FF /* RivieraOlympics.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D070A7E2AEB44CA48A912CE1 /* PogiApple */ = {
+			isa = PBXGroup;
+			children = (
+				E0CE0F06A6D3009AD07DC513 /* Config */,
+			);
+			name = PogiApple;
+			path = ../..;
+			sourceTree = "<group>";
+		};
+		E0CE0F06A6D3009AD07DC513 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A0EADB7BD2E24B53E8C0FFFC /* Signing.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		E9B98481D5E9317BEEBCE4FD /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */,
+				EDFED712CA110BA1EEFE1EBF /* Rulebook.md */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F938CCE55AAFF4593F75919F /* RivieraOlympics */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 36A4511E2891FA4FAE69219B /* Build configuration list for PBXNativeTarget "RivieraOlympics" */;
+			buildPhases = (
+				7CED91EC98C64001B536BA48 /* Sources */,
+				2C672D2F9BDF0A61A46490C5 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RivieraOlympics;
+			packageProductDependencies = (
+			);
+			productName = RivieraOlympics;
+			productReference = ED01E767E44C45BC3CD300FF /* RivieraOlympics.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		CE511CF254CC3368861C588B /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					F938CCE55AAFF4593F75919F = {
+						DevelopmentTeam = 7RQ7LP58P9;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A1F19178346C439754557EEB /* Build configuration list for PBXProject "RivieraOlympics" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = A8F2AF0A4D8F047866AF7922;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F938CCE55AAFF4593F75919F /* RivieraOlympics */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2C672D2F9BDF0A61A46490C5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FD64E5521C3EDC511E275931 /* Assets.xcassets in Resources */,
+				3A5DDCA4E463417207D3D699 /* RivieraOlympicsRules.pdf in Resources */,
+				251BD5AE886223FCB1D50F82 /* Rulebook.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7CED91EC98C64001B536BA48 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E9BA3704CEA1765C9370998F /* CompactHoleEditors.swift in Sources */,
+				F0E024582B9FFA3370CB9595 /* GolfModels.swift in Sources */,
+				1F8803693529894ADED0B1B8 /* HoleEntryView.swift in Sources */,
+				DF31A3CCFBC78D243771A3A5 /* HomeView.swift in Sources */,
+				3026C650496E5A690B0151B2 /* NewRoundView.swift in Sources */,
+				0BEFF0BAF89BDDFDC72A7916 /* OfficialPDFPage.swift in Sources */,
+				E5B94FE90B7985A4B135CF23 /* OlympicsCalculator.swift in Sources */,
+				20BA1CEBCE759348AB1384D9 /* OlympicsRulesPage.swift in Sources */,
+				9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */,
+				D815E49FC1C4C5B3B262D044 /* OptionsView.swift in Sources */,
+				8817EDA7DF2D5B435A8AE4F3 /* OtherRulesPage.swift in Sources */,
+				2752D8DE55A9D1CAFAA7D5BD /* PlayersView.swift in Sources */,
+				59F770F61C05CB52A9B3ED71 /* RivieraOlympicsApp.swift in Sources */,
+				6615DF0FCED7B9A7391FBC97 /* RivieraTheme.swift in Sources */,
+				92B8ACB930F1303AB764808A /* RootView.swift in Sources */,
+				90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */,
+				19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */,
+				97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */,
+				A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */,
+				C716AF40CED1F542E5AB247B /* ScorecardTablesView.swift in Sources */,
+				517F8BA1955CF82BE019460D /* SettlementView.swift in Sources */,
+				5A403F5D7BAC312EA9E9BFAA /* SideGameCalculators.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		262698F317644156112E5BA5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RivieraOlympics/RivieraOlympics.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RivieraOlympics/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "リビエラオリンピック";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.shinkosha.pogi.rivieraolympics;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		9C5BFAAE72F0AE48C6C873E9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0EADB7BD2E24B53E8C0FFFC /* Signing.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		B147854204E5F96C0C9CC4B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0EADB7BD2E24B53E8C0FFFC /* Signing.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		B41DDA05C5CAEFF65A9BA7EA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RivieraOlympics/RivieraOlympics.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RivieraOlympics/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "リビエラオリンピック";
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = org.shinkosha.pogi.rivieraolympics;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		36A4511E2891FA4FAE69219B /* Build configuration list for PBXNativeTarget "RivieraOlympics" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B41DDA05C5CAEFF65A9BA7EA /* Debug */,
+				262698F317644156112E5BA5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A1F19178346C439754557EEB /* Build configuration list for PBXProject "RivieraOlympics" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9C5BFAAE72F0AE48C6C873E9 /* Debug */,
+				B147854204E5F96C0C9CC4B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = CE511CF254CC3368861C588B /* Project object */;
+}
