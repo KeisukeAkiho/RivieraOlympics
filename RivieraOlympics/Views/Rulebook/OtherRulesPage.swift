@@ -2,10 +2,16 @@ import SwiftUI
 
 /// オリンピック以外のサイドゲーム・雑学
 struct OtherRulesPage: View {
+    @EnvironmentObject private var store: RoundStore
+    var onEditParameters: (() -> Void)?
+
+    private var lv: LasVegasRules { store.activeRulePreset.lasVegasRules }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 introBanner
+                activePresetBanner
 
                 RuleSectionHeader(icon: "person.3.fill", title: "ホールマッチ", color: RivieraTheme.fairway)
                 RuleCard(title: "みんなでホール勝負", icon: "flag.checkered") {
@@ -21,6 +27,12 @@ struct OtherRulesPage: View {
                     RuleBullet(text: "4と5 → 45", icon: "textformat.123")
                     RuleBullet(text: "3と10 → 310", icon: "textformat.123")
                     RuleParagraph(text: "チームの数字の差が大きいほど、そのホールの勝ちが大きくなります。")
+                    Divider()
+                    RuleParagraph(text: "いまのパラメータセット「\(store.activeRulePreset.name)」での拡張:")
+                    lvToggleLine("前ホール順位でペア組替", lv.rotatePairsByPreviousHoleScore)
+                    lvToggleLine("バーディーFlip", lv.birdieFlip)
+                    lvToggleLine("イーグルFlip＋×2", lv.eagleFlipAndDouble)
+                    lvToggleLine("チーム2バーディーFlip＋×2", lv.twoBirdiesFlipAndDouble)
                 }
 
                 RuleSectionHeader(icon: "building.columns.fill", title: "村長", color: .brown)
@@ -62,7 +74,7 @@ struct OtherRulesPage: View {
                     RuleBullet(text: "前の組がまだ近いときは打たない", icon: "figure.walk")
                 }
 
-                Text("このページはオリンピック公式PDF以外の遊び方です。")
+                Text("このページはオリンピック公式PDF以外の遊び方です。LV拡張のON/OFFは「パラメータ」タブで変えられます。")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
@@ -71,6 +83,42 @@ struct OtherRulesPage: View {
             .padding()
         }
         .background(pageBackground)
+    }
+
+    private func lvToggleLine(_ title: String, _ on: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+            Text(on ? "ON" : "OFF")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(on ? RivieraTheme.fairway : .secondary)
+        }
+    }
+
+    private var activePresetBanner: some View {
+        Button {
+            onEditParameters?()
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "slider.horizontal.3")
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("表示中のセット")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                    Text(store.activeRulePreset.name)
+                        .font(.subheadline.weight(.bold))
+                }
+                Spacer()
+                Text("編集")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(RivieraTheme.fairway)
+            }
+            .padding(12)
+            .background(Color.indigo.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        }
+        .buttonStyle(.plain)
     }
 
     private var introBanner: some View {

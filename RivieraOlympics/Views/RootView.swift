@@ -16,6 +16,11 @@ struct RootView: View {
             .tabItem { Label("プレイヤー", systemImage: "person.3.fill") }
 
             NavigationStack {
+                CoursesView()
+            }
+            .tabItem { Label("コース", systemImage: "map.fill") }
+
+            NavigationStack {
                 SettlementView()
             }
             .tabItem { Label("精算", systemImage: "yensign.circle") }

@@ -65,7 +65,9 @@ enum OlympicsStatus {
             hole: patched,
             players: round.players,
             penaltiesEnabled: round.options.penaltiesEnabled,
-            nearestPinCarryIn: hole.nearestPinCarryIn
+            nearestPinCarryIn: OlympicsCalculator.carryIn(forHole: holeNumber, round: round),
+            points: round.options.olympicsPoints,
+            customRules: round.options.customPointRules
         )
         guard let mine = result.perPlayer.first(where: { $0.playerId == draft.playerId }) else {
             return (0, [], false)

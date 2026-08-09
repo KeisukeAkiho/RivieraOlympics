@@ -56,6 +56,130 @@ extension RegisteredPlayer: Codable {
     }
 }
 
+/// ティーボックス（ホール別ヤード）
+struct CourseTee: Identifiable, Hashable, Equatable, Codable {
+    var id: UUID = UUID()
+    var name: String
+    /// 18ホールのヤード（0 = 未入力）
+    var yards: [Int]
+
+    static let presetNames = ["Gold", "Blue", "White", "Red", "Black", "Championship", "Forward"]
+
+    var totalYards: Int { yards.reduce(0, +) }
+    var hasAnyYardage: Bool { yards.contains(where: { $0 > 0 }) }
+
+    init(id: UUID = UUID(), name: String, yards: [Int] = Array(repeating: 0, count: 18)) {
+        self.id = id
+        self.name = name
+        self.yards = Self.normalizedYards(yards)
+    }
+
+    static func normalizedYards(_ yards: [Int]) -> [Int] {
+        var out = Array(repeating: 0, count: 18)
+        for i in 0..<min(18, yards.count) {
+            out[i] = max(0, yards[i])
+        }
+        return out
+    }
+
+    static func emptyPresets() -> [CourseTee] {
+        ["Gold", "Blue", "White", "Red"].map { CourseTee(name: $0) }
+    }
+}
+
+/// 登録コース（名前＋18ホールのパー＋ティー距離）
+struct RegisteredCourse: Identifiable, Hashable, Equatable {
+    var id: UUID = UUID()
+    var name: String
+    var pars: [Int]
+    var note: String = ""
+    var createdAt: Date = Date()
+    /// ゴルフ場名（例: The Riviera Golf and Country Club）
+    var clubName: String = ""
+    /// レイアウト名（例: Couples / Langer Out＋Couples In）
+    var layoutName: String = ""
+    var outNineName: String = ""
+    var inNineName: String = ""
+    /// 事前登録の重複防止キー
+    var seedKey: String? = nil
+    var isBuiltIn: Bool = false
+    /// ティー別ホール距離（ヤード）
+    var tees: [CourseTee] = []
+
+    static let defaultPars: [Int] = Array(repeating: 4, count: 18)
+
+    var totalPar: Int { pars.reduce(0, +) }
+    var outPar: Int { pars.prefix(9).reduce(0, +) }
+    var inPar: Int { pars.suffix(9).reduce(0, +) }
+    var displayTitle: String {
+        if !clubName.isEmpty, !layoutName.isEmpty {
+            return "\(clubName) — \(layoutName)"
+        }
+        return name
+    }
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        pars: [Int] = RegisteredCourse.defaultPars,
+        note: String = "",
+        createdAt: Date = Date(),
+        clubName: String = "",
+        layoutName: String = "",
+        outNineName: String = "",
+        inNineName: String = "",
+        seedKey: String? = nil,
+        isBuiltIn: Bool = false,
+        tees: [CourseTee] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.pars = Self.normalizedPars(pars)
+        self.note = note
+        self.createdAt = createdAt
+        self.clubName = clubName
+        self.layoutName = layoutName
+        self.outNineName = outNineName
+        self.inNineName = inNineName
+        self.seedKey = seedKey
+        self.isBuiltIn = isBuiltIn
+        self.tees = tees.map {
+            CourseTee(id: $0.id, name: $0.name, yards: CourseTee.normalizedYards($0.yards))
+        }
+    }
+
+    static func normalizedPars(_ pars: [Int]) -> [Int] {
+        var out = Array(repeating: 4, count: 18)
+        for i in 0..<min(18, pars.count) {
+            out[i] = min(5, max(3, pars[i]))
+        }
+        return out
+    }
+}
+
+extension RegisteredCourse: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, name, pars, note, createdAt
+        case clubName, layoutName, outNineName, inNineName, seedKey, isBuiltIn, tees
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try c.decode(String.self, forKey: .name)
+        pars = Self.normalizedPars(try c.decodeIfPresent([Int].self, forKey: .pars) ?? Self.defaultPars)
+        note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        clubName = try c.decodeIfPresent(String.self, forKey: .clubName) ?? ""
+        layoutName = try c.decodeIfPresent(String.self, forKey: .layoutName) ?? ""
+        outNineName = try c.decodeIfPresent(String.self, forKey: .outNineName) ?? ""
+        inNineName = try c.decodeIfPresent(String.self, forKey: .inNineName) ?? ""
+        seedKey = try c.decodeIfPresent(String.self, forKey: .seedKey)
+        isBuiltIn = try c.decodeIfPresent(Bool.self, forKey: .isBuiltIn) ?? (seedKey != nil)
+        tees = try c.decodeIfPresent([CourseTee].self, forKey: .tees) ?? []
+    }
+}
+
 /// ラウンド内のプレイヤー（IDは RegisteredPlayer と一致させる）
 struct Player: Identifiable, Hashable {
     var id: UUID = UUID()
@@ -97,6 +221,18 @@ struct RoundOptions: Equatable {
     var honestJohnEnabled: Bool = false
     var lasVegasTeamA: [UUID] = []
     var lasVegasTeamB: [UUID] = []
+    var olympicsPoints: OlympicsPointRules = .rivieraDefault
+    var customPointRules: [CustomPointRule] = []
+    var lasVegasRules: LasVegasRules = .default
+    /// 最後に適用／上書きした名前付きプリセット（任意）
+    var activeRulePresetId: UUID? = nil
+
+    mutating func applyRulePreset(_ preset: NamedGameRulePreset) {
+        olympicsPoints = preset.olympicsPoints
+        customPointRules = preset.customPointRules
+        lasVegasRules = preset.lasVegasRules
+        activeRulePresetId = preset.id
+    }
 }
 
 extension RoundOptions: Codable {
@@ -105,6 +241,7 @@ extension RoundOptions: Codable {
         case lasVegasEnabled, holeMatchEnabled
         case sonchoEnabled, snakeEnabled, snakeSettlePerNine, honestJohnEnabled
         case lasVegasTeamA, lasVegasTeamB
+        case olympicsPoints, customPointRules, lasVegasRules, activeRulePresetId
     }
 
     init(from decoder: Decoder) throws {
@@ -121,10 +258,14 @@ extension RoundOptions: Codable {
         honestJohnEnabled = try c.decodeIfPresent(Bool.self, forKey: .honestJohnEnabled) ?? false
         lasVegasTeamA = try c.decodeIfPresent([UUID].self, forKey: .lasVegasTeamA) ?? []
         lasVegasTeamB = try c.decodeIfPresent([UUID].self, forKey: .lasVegasTeamB) ?? []
+        olympicsPoints = try c.decodeIfPresent(OlympicsPointRules.self, forKey: .olympicsPoints) ?? .rivieraDefault
+        customPointRules = try c.decodeIfPresent([CustomPointRule].self, forKey: .customPointRules) ?? []
+        lasVegasRules = try c.decodeIfPresent(LasVegasRules.self, forKey: .lasVegasRules) ?? .default
+        activeRulePresetId = try c.decodeIfPresent(UUID.self, forKey: .activeRulePresetId)
     }
 }
 
-struct PlayerHoleEntry: Identifiable, Codable, Equatable {
+struct PlayerHoleEntry: Identifiable, Equatable {
     var id: UUID = UUID()
     var playerId: UUID
     var strokes: Int = 0
@@ -145,6 +286,86 @@ struct PlayerHoleEntry: Identifiable, Codable, Equatable {
     var greenInRegulationTee: Bool = false
     var strokesOnGreenAfterApproach: Int = 0
     var notes: String = ""
+    /// nil = use rule default when the flag is on
+    var pinPointsOverride: Int? = nil
+    var bankerPointsOverride: Int? = nil
+    var parOnPointsOverride: Int? = nil
+    var birdieOnPointsOverride: Int? = nil
+    /// Applied after reach math (not doubled by reach)
+    var manualPointAdjust: Int = 0
+    /// 独自ルールON（CustomPointRule.id）
+    var customActiveRuleIds: [UUID] = []
+}
+
+extension PlayerHoleEntry: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, playerId, strokes, putts, medal, chipInFromOffGreen
+        case declaredPin, pinDistanceQualified, banker, nameLick, awaya
+        case parOn, birdieOn, nearestPinContender, fireman, declaredReach
+        case outerPinDeclared, greenInRegulationTee, strokesOnGreenAfterApproach, notes
+        case pinPointsOverride, bankerPointsOverride, parOnPointsOverride, birdieOnPointsOverride
+        case manualPointAdjust, customActiveRuleIds
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        playerId = try c.decode(UUID.self, forKey: .playerId)
+        strokes = try c.decodeIfPresent(Int.self, forKey: .strokes) ?? 0
+        putts = try c.decodeIfPresent(Int.self, forKey: .putts) ?? 0
+        medal = try c.decodeIfPresent(OlympicMedal.self, forKey: .medal)
+        chipInFromOffGreen = try c.decodeIfPresent(Bool.self, forKey: .chipInFromOffGreen) ?? false
+        declaredPin = try c.decodeIfPresent(Bool.self, forKey: .declaredPin) ?? false
+        pinDistanceQualified = try c.decodeIfPresent(Bool.self, forKey: .pinDistanceQualified) ?? false
+        banker = try c.decodeIfPresent(Bool.self, forKey: .banker) ?? false
+        nameLick = try c.decodeIfPresent(Bool.self, forKey: .nameLick) ?? false
+        awaya = try c.decodeIfPresent(Bool.self, forKey: .awaya) ?? false
+        parOn = try c.decodeIfPresent(Bool.self, forKey: .parOn) ?? false
+        birdieOn = try c.decodeIfPresent(Bool.self, forKey: .birdieOn) ?? false
+        nearestPinContender = try c.decodeIfPresent(Bool.self, forKey: .nearestPinContender) ?? false
+        fireman = try c.decodeIfPresent(Bool.self, forKey: .fireman) ?? false
+        declaredReach = try c.decodeIfPresent(Bool.self, forKey: .declaredReach) ?? false
+        outerPinDeclared = try c.decodeIfPresent(Bool.self, forKey: .outerPinDeclared) ?? false
+        greenInRegulationTee = try c.decodeIfPresent(Bool.self, forKey: .greenInRegulationTee) ?? false
+        strokesOnGreenAfterApproach = try c.decodeIfPresent(Int.self, forKey: .strokesOnGreenAfterApproach) ?? 0
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        pinPointsOverride = try c.decodeIfPresent(Int.self, forKey: .pinPointsOverride)
+        bankerPointsOverride = try c.decodeIfPresent(Int.self, forKey: .bankerPointsOverride)
+        parOnPointsOverride = try c.decodeIfPresent(Int.self, forKey: .parOnPointsOverride)
+        birdieOnPointsOverride = try c.decodeIfPresent(Int.self, forKey: .birdieOnPointsOverride)
+        manualPointAdjust = try c.decodeIfPresent(Int.self, forKey: .manualPointAdjust) ?? 0
+        customActiveRuleIds = try c.decodeIfPresent([UUID].self, forKey: .customActiveRuleIds) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(playerId, forKey: .playerId)
+        try c.encode(strokes, forKey: .strokes)
+        try c.encode(putts, forKey: .putts)
+        try c.encodeIfPresent(medal, forKey: .medal)
+        try c.encode(chipInFromOffGreen, forKey: .chipInFromOffGreen)
+        try c.encode(declaredPin, forKey: .declaredPin)
+        try c.encode(pinDistanceQualified, forKey: .pinDistanceQualified)
+        try c.encode(banker, forKey: .banker)
+        try c.encode(nameLick, forKey: .nameLick)
+        try c.encode(awaya, forKey: .awaya)
+        try c.encode(parOn, forKey: .parOn)
+        try c.encode(birdieOn, forKey: .birdieOn)
+        try c.encode(nearestPinContender, forKey: .nearestPinContender)
+        try c.encode(fireman, forKey: .fireman)
+        try c.encode(declaredReach, forKey: .declaredReach)
+        try c.encode(outerPinDeclared, forKey: .outerPinDeclared)
+        try c.encode(greenInRegulationTee, forKey: .greenInRegulationTee)
+        try c.encode(strokesOnGreenAfterApproach, forKey: .strokesOnGreenAfterApproach)
+        try c.encode(notes, forKey: .notes)
+        try c.encodeIfPresent(pinPointsOverride, forKey: .pinPointsOverride)
+        try c.encodeIfPresent(bankerPointsOverride, forKey: .bankerPointsOverride)
+        try c.encodeIfPresent(parOnPointsOverride, forKey: .parOnPointsOverride)
+        try c.encodeIfPresent(birdieOnPointsOverride, forKey: .birdieOnPointsOverride)
+        try c.encode(manualPointAdjust, forKey: .manualPointAdjust)
+        try c.encode(customActiveRuleIds, forKey: .customActiveRuleIds)
+    }
 }
 
 struct HoleRecord: Identifiable, Codable, Equatable {
@@ -164,16 +385,43 @@ struct GolfRound: Identifiable, Equatable {
     var holes: [HoleRecord] = []
     var options: RoundOptions = RoundOptions()
     var coursePars: [Int] = Array(repeating: 4, count: 18)
+    var courseId: UUID? = nil
+    var courseName: String = ""
     /// 精算確定済み
     var isSettled: Bool = false
     var settledAt: Date? = nil
     /// 確定時のスナップショット（生涯戦績用）
     var settledSummary: SettlementSummary? = nil
 
-    static func newRound(title: String, registered: [RegisteredPlayer], pars: [Int] = Array(repeating: 4, count: 18)) -> GolfRound {
+    mutating func applyCourse(_ course: RegisteredCourse) {
+        courseId = course.id
+        courseName = course.name
+        coursePars = course.pars
+        for i in holes.indices {
+            let n = holes[i].holeNumber
+            if (1...18).contains(n) {
+                holes[i].par = course.pars[n - 1]
+            }
+        }
+    }
+
+    static func newRound(
+        title: String,
+        registered: [RegisteredPlayer],
+        pars: [Int] = Array(repeating: 4, count: 18),
+        options: RoundOptions = RoundOptions(),
+        course: RegisteredCourse? = nil
+    ) -> GolfRound {
         var round = GolfRound(title: title)
         round.players = registered.map { Player(from: $0) }
-        round.coursePars = pars.count == 18 ? pars : Array(repeating: 4, count: 18)
+        round.options = options
+        if let course {
+            round.courseId = course.id
+            round.courseName = course.name
+            round.coursePars = course.pars
+        } else {
+            round.coursePars = pars.count == 18 ? pars : Array(repeating: 4, count: 18)
+        }
         round.holes = (1...18).map { n in
             HoleRecord(
                 holeNumber: n,
@@ -181,7 +429,8 @@ struct GolfRound: Identifiable, Equatable {
                 entries: round.players.map { PlayerHoleEntry(playerId: $0.id) }
             )
         }
-        if round.players.count >= 4 {
+        if round.options.lasVegasTeamA.isEmpty && round.options.lasVegasTeamB.isEmpty,
+           round.players.count >= 4 {
             round.options.lasVegasTeamA = [round.players[0].id, round.players[1].id]
             round.options.lasVegasTeamB = [round.players[2].id, round.players[3].id]
         }
@@ -197,7 +446,7 @@ struct GolfRound: Identifiable, Equatable {
 
 extension GolfRound: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, title, date, players, holes, options, coursePars
+        case id, title, date, players, holes, options, coursePars, courseId, courseName
         case isSettled, settledAt, settledSummary
     }
 
@@ -210,6 +459,8 @@ extension GolfRound: Codable {
         holes = try c.decodeIfPresent([HoleRecord].self, forKey: .holes) ?? []
         options = try c.decodeIfPresent(RoundOptions.self, forKey: .options) ?? RoundOptions()
         coursePars = try c.decodeIfPresent([Int].self, forKey: .coursePars) ?? Array(repeating: 4, count: 18)
+        courseId = try c.decodeIfPresent(UUID.self, forKey: .courseId)
+        courseName = try c.decodeIfPresent(String.self, forKey: .courseName) ?? ""
         isSettled = try c.decodeIfPresent(Bool.self, forKey: .isSettled) ?? false
         settledAt = try c.decodeIfPresent(Date.self, forKey: .settledAt)
         settledSummary = try c.decodeIfPresent(SettlementSummary.self, forKey: .settledSummary)

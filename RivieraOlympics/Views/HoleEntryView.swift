@@ -56,7 +56,9 @@ struct HoleEntryView: View {
                                 hole: hole,
                                 players: round.players,
                                 penaltiesEnabled: round.options.penaltiesEnabled,
-                                nearestPinCarryIn: hole.nearestPinCarryIn
+                                nearestPinCarryIn: hole.nearestPinCarryIn,
+                                points: round.options.olympicsPoints,
+                                customRules: round.options.customPointRules
                             )
                             ForEach(result.perPlayer, id: \.playerId) { p in
                                 let name = round.players.first(where: { $0.id == p.playerId })?.name ?? "?"
@@ -132,7 +134,9 @@ struct HoleEntryView: View {
                 hole: r.holes[i],
                 players: r.players,
                 penaltiesEnabled: r.options.penaltiesEnabled,
-                nearestPinCarryIn: carry
+                nearestPinCarryIn: carry,
+                points: r.options.olympicsPoints,
+                customRules: r.options.customPointRules
             )
             carry = scored.nearestPinCarryOut
         }

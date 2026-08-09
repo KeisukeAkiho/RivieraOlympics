@@ -1,37 +1,154 @@
 import Foundation
 
 enum LasVegasCalculator {
-    /// Classic Las Vegas: each hole concatenate team scores (lower first). Diff × stake.
-    /// Returns per-hole signed diffs from Team A perspective (positive = A collects).
-    static func holeDiffs(round: GolfRound) -> [Int] {
-        guard round.options.lasVegasEnabled else { return [] }
-        let a = Set(round.options.lasVegasTeamA)
-        let b = Set(round.options.lasVegasTeamB)
-        guard a.count >= 1, b.count >= 1 else { return [] }
+    struct HoleTeams: Equatable {
+        var teamA: [UUID]
+        var teamB: [UUID]
 
-        return round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }).map { hole in
-            let aScores = hole.entries.filter { a.contains($0.playerId) && $0.strokes > 0 }.map(\.strokes).sorted()
-            let bScores = hole.entries.filter { b.contains($0.playerId) && $0.strokes > 0 }.map(\.strokes).sorted()
-            guard aScores.count >= 2, bScores.count >= 2 else { return 0 }
-            let aCombo = combine(aScores[0], aScores[1])
-            let bCombo = combine(bScores[0], bScores[1])
-            return aCombo - bCombo
+        func side(of playerId: UUID) -> TeamSide? {
+            if teamA.contains(playerId) { return .a }
+            if teamB.contains(playerId) { return .b }
+            return nil
         }
     }
 
+    enum TeamSide {
+        case a, b
+    }
+
+    /// Classic Las Vegas concat scores. Diff is from Team A perspective (positive = A collects).
+    /// Teams change each hole from prior-hole ranking: 1st+4th vs 2nd+3rd (hole 1 uses option teams).
+    static func holeDiffs(round: GolfRound) -> [Int] {
+        guard round.options.lasVegasEnabled else { return [] }
+        return round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }).map { hole in
+            let teams = teams(forHole: hole.holeNumber, round: round)
+            return holeDiff(hole: hole, teams: teams, rules: round.options.lasVegasRules)
+        }
+    }
+
+    /// Per-hole team assignment for display / settlement.
+    static func teamsByHole(round: GolfRound) -> [HoleTeams] {
+        guard round.options.lasVegasEnabled else { return [] }
+        return round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }).map {
+            teams(forHole: $0.holeNumber, round: round)
+        }
+    }
+
+    static func teams(forHole holeNumber: Int, round: GolfRound) -> HoleTeams {
+        let rules = round.options.lasVegasRules
+        if holeNumber <= 1 || !rules.rotatePairsByPreviousHoleScore {
+            return startingTeams(round: round)
+        }
+        guard let prev = round.holes.first(where: { $0.holeNumber == holeNumber - 1 }) else {
+            return startingTeams(round: round)
+        }
+        let ranked = rankedPlayerIds(hole: prev, players: round.players)
+        guard ranked.count >= 4 else {
+            return startingTeams(round: round)
+        }
+        // スコア順（良い→悪い）: 1位+4位 vs 2位+3位
+        return HoleTeams(
+            teamA: [ranked[0], ranked[3]],
+            teamB: [ranked[1], ranked[2]]
+        )
+    }
+
     static func yenByPlayer(round: GolfRound) -> [UUID: Int] {
-        let diffs = holeDiffs(round: round)
-        let totalDiff = diffs.reduce(0, +)
+        guard round.options.lasVegasEnabled else { return [:] }
         let stake = round.options.stakeRate
-        var map: [UUID: Int] = [:]
-        for id in round.options.lasVegasTeamA { map[id, default: 0] += totalDiff * stake / max(1, round.options.lasVegasTeamA.count) }
-        for id in round.options.lasVegasTeamB { map[id, default: 0] -= totalDiff * stake / max(1, round.options.lasVegasTeamB.count) }
+        var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
+        for hole in round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }) {
+            let teams = teams(forHole: hole.holeNumber, round: round)
+            let diff = holeDiff(hole: hole, teams: teams, rules: round.options.lasVegasRules)
+            guard diff != 0, teams.teamA.count >= 1, teams.teamB.count >= 1 else { continue }
+            let aShare = diff * stake / teams.teamA.count
+            let bShare = diff * stake / teams.teamB.count
+            for id in teams.teamA { map[id, default: 0] += aShare }
+            for id in teams.teamB { map[id, default: 0] -= bShare }
+        }
         return map
+    }
+
+    private static func startingTeams(round: GolfRound) -> HoleTeams {
+        let a = round.options.lasVegasTeamA
+        let b = round.options.lasVegasTeamB
+        if a.count >= 2, b.count >= 2 {
+            return HoleTeams(teamA: Array(a.prefix(2)), teamB: Array(b.prefix(2)))
+        }
+        let ids = round.players.map(\.id)
+        guard ids.count >= 4 else {
+            return HoleTeams(teamA: Array(ids.prefix(2)), teamB: Array(ids.dropFirst(2).prefix(2)))
+        }
+        return HoleTeams(teamA: [ids[0], ids[1]], teamB: [ids[2], ids[3]])
+    }
+
+    /// Lower strokes first; ties broken by roster order.
+    private static func rankedPlayerIds(hole: HoleRecord, players: [Player]) -> [UUID] {
+        let order = Dictionary(uniqueKeysWithValues: players.enumerated().map { ($0.element.id, $0.offset) })
+        return hole.entries
+            .filter { $0.strokes > 0 }
+            .sorted { lhs, rhs in
+                if lhs.strokes != rhs.strokes { return lhs.strokes < rhs.strokes }
+                return (order[lhs.playerId] ?? 0) < (order[rhs.playerId] ?? 0)
+            }
+            .map(\.playerId)
+    }
+
+    private static func holeDiff(hole: HoleRecord, teams: HoleTeams, rules: LasVegasRules) -> Int {
+        let a = Set(teams.teamA)
+        let b = Set(teams.teamB)
+        let aEntries = hole.entries.filter { a.contains($0.playerId) && $0.strokes > 0 }
+        let bEntries = hole.entries.filter { b.contains($0.playerId) && $0.strokes > 0 }
+        let aScores = aEntries.map(\.strokes).sorted()
+        let bScores = bEntries.map(\.strokes).sorted()
+        guard aScores.count >= 2, bScores.count >= 2 else { return 0 }
+
+        var aCombo = combine(aScores[0], aScores[1])
+        var bCombo = combine(bScores[0], bScores[1])
+        var multiplier = 1
+
+        let aBirdies = aEntries.filter { $0.strokes - hole.par <= -1 }.count
+        let bBirdies = bEntries.filter { $0.strokes - hole.par <= -1 }.count
+        let aEagles = aEntries.contains { $0.strokes - hole.par <= -2 }
+        let bEagles = bEntries.contains { $0.strokes - hole.par <= -2 }
+
+        // Priority: eagle → two birdies → birdie. Flip once per side; ×2 at most once.
+        enum Special: Int { case none = 0, birdie = 1, twoBirdies = 2, eagle = 3 }
+        var aSpecial: Special = .none
+        var bSpecial: Special = .none
+
+        if rules.eagleFlipAndDouble {
+            if aEagles && !bEagles { aSpecial = .eagle }
+            else if bEagles && !aEagles { bSpecial = .eagle }
+        }
+        if rules.twoBirdiesFlipAndDouble {
+            if aSpecial == .none, aBirdies >= 2, bBirdies < 2 { aSpecial = .twoBirdies }
+            if bSpecial == .none, bBirdies >= 2, aBirdies < 2 { bSpecial = .twoBirdies }
+        }
+        if rules.birdieFlip {
+            if aSpecial == .none, aBirdies >= 1, bBirdies == 0 { aSpecial = .birdie }
+            if bSpecial == .none, bBirdies >= 1, aBirdies == 0 { bSpecial = .birdie }
+        }
+
+        if aSpecial != .none {
+            bCombo = flipDigits(bCombo)
+            if aSpecial == .eagle || aSpecial == .twoBirdies { multiplier = 2 }
+        } else if bSpecial != .none {
+            aCombo = flipDigits(aCombo)
+            if bSpecial == .eagle || bSpecial == .twoBirdies { multiplier = 2 }
+        }
+
+        return (aCombo - bCombo) * multiplier
     }
 
     private static func combine(_ low: Int, _ high: Int) -> Int {
         if high >= 10 { return low * 100 + high }
         return low * 10 + high
+    }
+
+    private static func flipDigits(_ n: Int) -> Int {
+        let s = String(n)
+        return Int(String(s.reversed())) ?? n
     }
 }
 
@@ -165,6 +282,27 @@ enum SnakeCalculator {
             }
         }
         return Run(segments: segments, yen: yen)
+    }
+
+    /// Per-hole snake holder after processing that hole (nil if no holder yet in the open segment).
+    static func holderByHole(round: GolfRound) -> [UUID?] {
+        guard round.options.snakeEnabled else { return Array(repeating: nil, count: 18) }
+        var out: [UUID?] = Array(repeating: nil, count: 18)
+        let settleHoles = Set(round.options.snakeSettlePerNine ? [9, 18] : [18])
+        var holder: UUID? = nil
+        let holes = round.holes.sorted(by: { $0.holeNumber < $1.holeNumber })
+        for hole in holes {
+            for entry in hole.entries where entry.putts >= 3 {
+                holder = entry.playerId
+            }
+            if hole.holeNumber >= 1 && hole.holeNumber <= 18 {
+                out[hole.holeNumber - 1] = holder
+            }
+            if settleHoles.contains(hole.holeNumber) {
+                holder = nil
+            }
+        }
+        return out
     }
 }
 

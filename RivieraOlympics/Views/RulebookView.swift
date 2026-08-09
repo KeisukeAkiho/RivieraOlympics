@@ -4,6 +4,7 @@ struct RulebookView: View {
     enum RuleTab: String, CaseIterable, Identifiable {
         case olympics = "オリンピック"
         case other = "その他"
+        case parameters = "パラメータ"
         case pdf = "公式PDF"
 
         var id: String { rawValue }
@@ -12,6 +13,7 @@ struct RulebookView: View {
             switch self {
             case .olympics: return "medal.fill"
             case .other: return "puzzlepiece.extension.fill"
+            case .parameters: return "slider.horizontal.3"
             case .pdf: return "doc.richtext.fill"
             }
         }
@@ -21,22 +23,23 @@ struct RulebookView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Kid-friendly segmented tabs with icons
             VStack(spacing: 8) {
                 Text("ルールブック")
                     .font(.title2.weight(.bold))
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     ForEach(RuleTab.allCases) { item in
                         Button {
                             withAnimation(.easeInOut(duration: 0.2)) { tab = item }
                         } label: {
                             VStack(spacing: 4) {
                                 Image(systemName: item.icon)
-                                    .font(.title3)
+                                    .font(.body)
                                 Text(item.rawValue)
-                                    .font(.caption.weight(.semibold))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -64,9 +67,11 @@ struct RulebookView: View {
             Group {
                 switch tab {
                 case .olympics:
-                    OlympicsRulesPage()
+                    OlympicsRulesPage(onEditParameters: { tab = .parameters })
                 case .other:
-                    OtherRulesPage()
+                    OtherRulesPage(onEditParameters: { tab = .parameters })
+                case .parameters:
+                    RuleParametersPage()
                 case .pdf:
                     OfficialPDFPage()
                 }

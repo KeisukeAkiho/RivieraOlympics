@@ -4,6 +4,19 @@ struct PlayersView: View {
     @EnvironmentObject private var store: RoundStore
     @State private var showEditor = false
     @State private var editingPlayer: RegisteredPlayer?
+    @State private var playerSearch = ""
+
+    private var filteredPlayers: [RegisteredPlayer] {
+        let q = playerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return store.players }
+        return store.players.filter { player in
+            player.name.localizedStandardContains(q)
+                || player.homeCourse.localizedStandardContains(q)
+                || player.homeTee.localizedStandardContains(q)
+                || player.handicap.localizedStandardContains(q)
+                || player.note.localizedStandardContains(q)
+        }
+    }
 
     var body: some View {
         List {
@@ -21,8 +34,11 @@ struct PlayersView: View {
                 if store.players.isEmpty {
                     Text("まだ登録がありません。上のボタンから名前・ホームコースなどを登録してください。")
                         .foregroundStyle(.secondary)
+                } else if filteredPlayers.isEmpty {
+                    Text("「\(playerSearch)」に一致するプレイヤーがいません。")
+                        .foregroundStyle(.secondary)
                 }
-                ForEach(store.players) { p in
+                ForEach(filteredPlayers) { p in
                     NavigationLink {
                         PlayerDetailView(playerId: p.id)
                     } label: {
@@ -48,13 +64,15 @@ struct PlayersView: View {
                     }
                 }
                 .onDelete { idx in
-                    for i in idx {
-                        store.deletePlayer(id: store.players[i].id)
+                    let targets = idx.map { filteredPlayers[$0].id }
+                    for id in targets {
+                        store.deletePlayer(id: id)
                     }
                 }
             }
         }
         .navigationTitle("プレイヤー")
+        .searchable(text: $playerSearch, prompt: "名前・ホームコースで検索")
         .sheet(isPresented: $showEditor) {
             PlayerEditorSheet(player: editingPlayer)
         }
@@ -87,8 +105,19 @@ struct PlayerEditorSheet: View {
             Form {
                 Section("基本") {
                     TextField("名前（必須）", text: $name)
-                    TextField("ホームコース", text: $homeCourse)
-                        .textInputAutocapitalization(.words)
+                    if store.courses.isEmpty {
+                        TextField("ホームコース", text: $homeCourse)
+                            .textInputAutocapitalization(.words)
+                    } else {
+                        Picker("登録コースから選ぶ", selection: homeCoursePickBinding) {
+                            Text("手入力／未選択").tag(Optional<UUID>.none)
+                            ForEach(store.courses) { c in
+                                Text(c.name).tag(Optional(c.id))
+                            }
+                        }
+                        TextField("ホームコース", text: $homeCourse)
+                            .textInputAutocapitalization(.words)
+                    }
                     TextField("ティー（例: 白・青・金）", text: $homeTee)
                     TextField("ハンディキャップ", text: $handicap)
                         .keyboardType(.decimalPad)
@@ -126,6 +155,19 @@ struct PlayerEditorSheet: View {
                 }
             }
         }
+    }
+
+    private var homeCoursePickBinding: Binding<UUID?> {
+        Binding(
+            get: {
+                store.courses.first(where: { $0.name == homeCourse })?.id
+            },
+            set: { id in
+                if let id, let course = store.course(id: id) {
+                    homeCourse = course.name
+                }
+            }
+        )
     }
 
     private func save() {

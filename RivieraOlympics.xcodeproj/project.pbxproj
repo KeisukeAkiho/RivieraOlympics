@@ -7,17 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		05C298C642CEF93AA1028EC2 /* CompetitionGamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E61B4BA6BF332EC0E2B83784 /* CompetitionGamesView.swift */; };
 		0BEFF0BAF89BDDFDC72A7916 /* OfficialPDFPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */; };
 		19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE970B8B43B209F4616D085 /* RoundStore.swift */; };
 		1F8803693529894ADED0B1B8 /* HoleEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3481BBD078BF959BB6225F9C /* HoleEntryView.swift */; };
 		20BA1CEBCE759348AB1384D9 /* OlympicsRulesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */; };
 		251BD5AE886223FCB1D50F82 /* Rulebook.md in Resources */ = {isa = PBXBuildFile; fileRef = EDFED712CA110BA1EEFE1EBF /* Rulebook.md */; };
 		2752D8DE55A9D1CAFAA7D5BD /* PlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91518199FC77AFFE421985DC /* PlayersView.swift */; };
+		29E3A079AFECEA66BF4CCF42 /* CompetitionGamesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3044E14521EB9E7AA5960847 /* CompetitionGamesSection.swift */; };
 		3026C650496E5A690B0151B2 /* NewRoundView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */; };
 		3A5DDCA4E463417207D3D699 /* RivieraOlympicsRules.pdf in Resources */ = {isa = PBXBuildFile; fileRef = 732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */; };
 		517F8BA1955CF82BE019460D /* SettlementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */; };
 		59F770F61C05CB52A9B3ED71 /* RivieraOlympicsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C17FF4100446DAEAD3409DA4 /* RivieraOlympicsApp.swift */; };
 		5A403F5D7BAC312EA9E9BFAA /* SideGameCalculators.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B93FC98D0C255A56E6F10E4 /* SideGameCalculators.swift */; };
+		5AFC52DB3E223321DF218927 /* CoursesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B340FA690B8F20A9354B2E7C /* CoursesView.swift */; };
 		6615DF0FCED7B9A7391FBC97 /* RivieraTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E930C7299E7D803E2BFC2D5 /* RivieraTheme.swift */; };
 		8817EDA7DF2D5B435A8AE4F3 /* OtherRulesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F18A1BE8FDBB9C2BC9666DC8 /* OtherRulesPage.swift */; };
 		90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */; };
@@ -25,12 +28,16 @@
 		9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */; };
 		97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */; };
 		A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F82B53000B816E362CA976D /* RulebookView.swift */; };
+		C149286A708EFE83A4AB6655 /* PhilippineCourseCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6902F8209B12C32517D72A0D /* PhilippineCourseCatalog.swift */; };
 		C716AF40CED1F542E5AB247B /* ScorecardTablesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */; };
+		CA4FBEA01881A050248808A5 /* RuleParametersPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73DFC2E13466FD528F11866D /* RuleParametersPage.swift */; };
+		D5F41CBF53CB0D5F7FFDD2EB /* GameRuleParameters.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA698DE0B82FE7ACFC4B2B49 /* GameRuleParameters.swift */; };
 		D815E49FC1C4C5B3B262D044 /* OptionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */; };
 		DF31A3CCFBC78D243771A3A5 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 750305254EE4804FAA954C6F /* HomeView.swift */; };
 		E5B94FE90B7985A4B135CF23 /* OlympicsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512B674DC18FD0C3946CEE5C /* OlympicsCalculator.swift */; };
 		E9BA3704CEA1765C9370998F /* CompactHoleEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */; };
 		F0E024582B9FFA3370CB9595 /* GolfModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C3072A536E1644CB9F9489 /* GolfModels.swift */; };
+		F4D1E26F106D962FEA0AAF03 /* GameRulesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE24C41C0AA30A2525D1CA2 /* GameRulesSettingsView.swift */; };
 		FD64E5521C3EDC511E275931 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -40,6 +47,7 @@
 		19978D40D91470300263C170 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		1B93FC98D0C255A56E6F10E4 /* SideGameCalculators.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideGameCalculators.swift; sourceTree = "<group>"; };
 		2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3044E14521EB9E7AA5960847 /* CompetitionGamesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionGamesSection.swift; sourceTree = "<group>"; };
 		3481BBD078BF959BB6225F9C /* HoleEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoleEntryView.swift; sourceTree = "<group>"; };
 		3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulebookComponents.swift; sourceTree = "<group>"; };
 		4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicsRulesPage.swift; sourceTree = "<group>"; };
@@ -48,18 +56,24 @@
 		51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsView.swift; sourceTree = "<group>"; };
 		5F82B53000B816E362CA976D /* RulebookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulebookView.swift; sourceTree = "<group>"; };
 		61FF14B06B4C68DDD91C5B69 /* RivieraOlympics.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RivieraOlympics.entitlements; sourceTree = "<group>"; };
+		6902F8209B12C32517D72A0D /* PhilippineCourseCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhilippineCourseCatalog.swift; sourceTree = "<group>"; };
 		732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = RivieraOlympicsRules.pdf; sourceTree = "<group>"; };
+		73DFC2E13466FD528F11866D /* RuleParametersPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleParametersPage.swift; sourceTree = "<group>"; };
 		750305254EE4804FAA954C6F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		7CE24C41C0AA30A2525D1CA2 /* GameRulesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRulesSettingsView.swift; sourceTree = "<group>"; };
 		80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundDetailView.swift; sourceTree = "<group>"; };
 		91518199FC77AFFE421985DC /* PlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayersView.swift; sourceTree = "<group>"; };
 		962C80D94591DB7AEF63C3AF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialPDFPage.swift; sourceTree = "<group>"; };
 		A0EADB7BD2E24B53E8C0FFFC /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactHoleEditors.swift; sourceTree = "<group>"; };
+		B340FA690B8F20A9354B2E7C /* CoursesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoursesView.swift; sourceTree = "<group>"; };
 		B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicsStatus.swift; sourceTree = "<group>"; };
+		BA698DE0B82FE7ACFC4B2B49 /* GameRuleParameters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRuleParameters.swift; sourceTree = "<group>"; };
 		C17FF4100446DAEAD3409DA4 /* RivieraOlympicsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RivieraOlympicsApp.swift; sourceTree = "<group>"; };
 		CAE970B8B43B209F4616D085 /* RoundStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundStore.swift; sourceTree = "<group>"; };
 		E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScorecardTablesView.swift; sourceTree = "<group>"; };
+		E61B4BA6BF332EC0E2B83784 /* CompetitionGamesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompetitionGamesView.swift; sourceTree = "<group>"; };
 		ED01E767E44C45BC3CD300FF /* RivieraOlympics.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RivieraOlympics.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		EDFED712CA110BA1EEFE1EBF /* Rulebook.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Rulebook.md; sourceTree = "<group>"; };
 		F18A1BE8FDBB9C2BC9666DC8 /* OtherRulesPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OtherRulesPage.swift; sourceTree = "<group>"; };
@@ -106,6 +120,10 @@
 			isa = PBXGroup;
 			children = (
 				A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */,
+				3044E14521EB9E7AA5960847 /* CompetitionGamesSection.swift */,
+				E61B4BA6BF332EC0E2B83784 /* CompetitionGamesView.swift */,
+				B340FA690B8F20A9354B2E7C /* CoursesView.swift */,
+				7CE24C41C0AA30A2525D1CA2 /* GameRulesSettingsView.swift */,
 				3481BBD078BF959BB6225F9C /* HoleEntryView.swift */,
 				750305254EE4804FAA954C6F /* HomeView.swift */,
 				07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */,
@@ -114,6 +132,7 @@
 				19978D40D91470300263C170 /* RootView.swift */,
 				80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */,
 				5F82B53000B816E362CA976D /* RulebookView.swift */,
+				73DFC2E13466FD528F11866D /* RuleParametersPage.swift */,
 				E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */,
 				F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */,
 				1085375D170CBF9DBB2103A6 /* Rulebook */,
@@ -144,7 +163,9 @@
 		ABF6C850E362B406AAD56DA7 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BA698DE0B82FE7ACFC4B2B49 /* GameRuleParameters.swift */,
 				17C3072A536E1644CB9F9489 /* GolfModels.swift */,
+				6902F8209B12C32517D72A0D /* PhilippineCourseCatalog.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -257,6 +278,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				E9BA3704CEA1765C9370998F /* CompactHoleEditors.swift in Sources */,
+				29E3A079AFECEA66BF4CCF42 /* CompetitionGamesSection.swift in Sources */,
+				05C298C642CEF93AA1028EC2 /* CompetitionGamesView.swift in Sources */,
+				5AFC52DB3E223321DF218927 /* CoursesView.swift in Sources */,
+				D5F41CBF53CB0D5F7FFDD2EB /* GameRuleParameters.swift in Sources */,
+				F4D1E26F106D962FEA0AAF03 /* GameRulesSettingsView.swift in Sources */,
 				F0E024582B9FFA3370CB9595 /* GolfModels.swift in Sources */,
 				1F8803693529894ADED0B1B8 /* HoleEntryView.swift in Sources */,
 				DF31A3CCFBC78D243771A3A5 /* HomeView.swift in Sources */,
@@ -267,12 +293,14 @@
 				9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */,
 				D815E49FC1C4C5B3B262D044 /* OptionsView.swift in Sources */,
 				8817EDA7DF2D5B435A8AE4F3 /* OtherRulesPage.swift in Sources */,
+				C149286A708EFE83A4AB6655 /* PhilippineCourseCatalog.swift in Sources */,
 				2752D8DE55A9D1CAFAA7D5BD /* PlayersView.swift in Sources */,
 				59F770F61C05CB52A9B3ED71 /* RivieraOlympicsApp.swift in Sources */,
 				6615DF0FCED7B9A7391FBC97 /* RivieraTheme.swift in Sources */,
 				92B8ACB930F1303AB764808A /* RootView.swift in Sources */,
 				90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */,
 				19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */,
+				CA4FBEA01881A050248808A5 /* RuleParametersPage.swift in Sources */,
 				97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */,
 				A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */,
 				C716AF40CED1F542E5AB247B /* ScorecardTablesView.swift in Sources */,
