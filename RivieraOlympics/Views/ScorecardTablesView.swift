@@ -15,6 +15,7 @@ struct ScorecardTablesView: View {
     private let nameWidth: CGFloat = 52
     private let cellWidth: CGFloat = 44
     private let cellHeight: CGFloat = 36
+    private let yardsRowHeight: CGFloat = 26
     /// ラスベガス選手行: A/B + そのホールの得失点
     private let lvPlayerRowHeight: CGFloat = 46
     private let sectionBandHeight: CGFloat = 28
@@ -83,11 +84,14 @@ struct ScorecardTablesView: View {
                         .environmentObject(store)
                 }
                 .sheet(item: $scoreHoleTarget) { target in
+                    let live = currentRound ?? round
                     CompactScoreEditor(
                         strokesByPlayer: $scoreDraft,
-                        players: (currentRound ?? round).players,
+                        players: live.players,
                         holeNumber: target.holeNumber,
                         par: par(for: target.holeNumber),
+                        yards: live.yards(forHole: target.holeNumber),
+                        teeName: live.selectedTeeName,
                         onCommit: {
                             commitScores(hole: target.holeNumber, strokesByPlayer: scoreDraft)
                             scoreHoleTarget = nil
@@ -214,7 +218,13 @@ struct ScorecardTablesView: View {
 
     private func stickyColumn(round: GolfRound) -> some View {
         VStack(spacing: 0) {
-            stickyPlayerSection(title: "選手", tint: RivieraTheme.fairway.opacity(0.15), round: round, olympicsFocus: false)
+            stickyPlayerSection(
+                title: "選手",
+                tint: RivieraTheme.fairway.opacity(0.15),
+                round: round,
+                olympicsFocus: false,
+                includeYardsRow: round.hasHoleYards
+            )
 
             if round.options.olympicsEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
@@ -265,13 +275,19 @@ struct ScorecardTablesView: View {
         round: GolfRound,
         olympicsFocus: Bool,
         skipHeader: Bool = false,
-        rowHeight: CGFloat? = nil
+        rowHeight: CGFloat? = nil,
+        includeYardsRow: Bool = false
     ) -> some View {
         let h = rowHeight ?? cellHeight
         return VStack(spacing: 0) {
             if !skipHeader {
                 cellText(title, bold: true, width: nameWidth, height: cellHeight)
                     .background(tint)
+            }
+            if includeYardsRow {
+                let label = round.selectedTeeName.isEmpty ? "yd" : round.selectedTeeName
+                cellText(label, bold: true, width: nameWidth, height: yardsRowHeight)
+                    .background(RivieraTheme.fairway.opacity(0.10))
             }
             ForEach(round.players) { p in
                 let focused = olympicsFocus && olympicsFocusPlayerId == p.id
@@ -299,6 +315,9 @@ struct ScorecardTablesView: View {
                 nineTint: RivieraTheme.fairway.opacity(0.22),
                 totalTint: RivieraTheme.fairway.opacity(0.28)
             )
+            if round.hasHoleYards {
+                nineSplitYardsRow(round: round)
+            }
             ForEach(round.players) { p in
                 HStack(spacing: 0) {
                     ForEach(1...9, id: \.self) { h in
@@ -406,7 +425,7 @@ struct ScorecardTablesView: View {
         let cellFocused = olympicsFocusPlayerId == playerId && olympicsPresented && olympicsHole == hole
         return Button {
             guard !round.isSettled else { return }
-            draftEntry = holeEntry ?? PlayerHoleEntry(playerId: playerId)
+            draftEntry = olympicsDraft(from: holeEntry, playerId: playerId)
             olympicsPlayerId = playerId
             olympicsHole = hole
             olympicsPresented = true
@@ -434,6 +453,32 @@ struct ScorecardTablesView: View {
                 .background(nineTint)
             cellText("計", bold: true, width: cellWidth, height: cellHeight)
                 .background(totalTint)
+        }
+    }
+
+    private func nineSplitYardsRow(round: GolfRound) -> some View {
+        let tint = RivieraTheme.fairway.opacity(0.08)
+        let nineTint = RivieraTheme.fairway.opacity(0.14)
+        let out = round.courseYards.prefix(9).reduce(0, +)
+        let inn = round.courseYards.suffix(9).reduce(0, +)
+        let tot = out + inn
+        return HStack(spacing: 0) {
+            ForEach(1...9, id: \.self) { h in
+                let y = round.yards(forHole: h)
+                cellText(y > 0 ? "\(y)" : "—", bold: false, width: cellWidth, height: yardsRowHeight)
+                    .background(tint)
+            }
+            cellText(out > 0 ? "\(out)" : "—", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(nineTint)
+            ForEach(10...18, id: \.self) { h in
+                let y = round.yards(forHole: h)
+                cellText(y > 0 ? "\(y)" : "—", bold: false, width: cellWidth, height: yardsRowHeight)
+                    .background(tint)
+            }
+            cellText(inn > 0 ? "\(inn)" : "—", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(nineTint)
+            cellText(tot > 0 ? "\(tot)" : "—", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(RivieraTheme.fairway.opacity(0.18))
         }
     }
 
@@ -925,6 +970,12 @@ struct ScorecardTablesView: View {
         var saved = entry
         saved.playerId = target.playerId
 
+        // 金銀銅鉄はホール内で重複させない（UI無効化の保険）
+        if let m = saved.medal, [.gold, .silver, .bronze, .iron].contains(m),
+           r.holes[hi].entries.contains(where: { $0.playerId != saved.playerId && $0.medal == m }) {
+            saved.medal = nil
+        }
+
         if let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == target.playerId }) {
             // Keep original entry id for Equatable/Codable stability
             saved.id = r.holes[hi].entries[ei].id
@@ -970,9 +1021,21 @@ struct ScorecardTablesView: View {
 
         let nextPlayer = r.players[nextIdx]
         let refreshed = store.rounds.first(where: { $0.id == roundId }) ?? r
-        draftEntry = entry(round: refreshed, playerId: nextPlayer.id, hole: olympicsHole)
-            ?? PlayerHoleEntry(playerId: nextPlayer.id)
+        draftEntry = olympicsDraft(
+            from: entry(round: refreshed, playerId: nextPlayer.id, hole: olympicsHole),
+            playerId: nextPlayer.id
+        )
         olympicsPlayerId = nextPlayer.id
+    }
+
+    /// オリンピック入力下書き。パット未入力(0)はデフォルト2。
+    private func olympicsDraft(from existing: PlayerHoleEntry?, playerId: UUID) -> PlayerHoleEntry {
+        var e = existing ?? PlayerHoleEntry(playerId: playerId)
+        e.playerId = playerId
+        if e.putts == 0 {
+            e.putts = 2
+        }
+        return e
     }
 
     private func entry(round: GolfRound, playerId: UUID, hole: Int) -> PlayerHoleEntry? {

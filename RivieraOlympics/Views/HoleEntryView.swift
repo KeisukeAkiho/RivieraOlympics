@@ -22,10 +22,18 @@ struct HoleEntryView: View {
                 let round = store.rounds[ri]
                 let hole = round.holes[hi]
                 List {
-                    Section("ホール \(holeNumber) · パー \(hole.par)") {
+                    Section {
+                        if round.yards(forHole: holeNumber) > 0 {
+                            let y = round.yards(forHole: holeNumber)
+                            let tee = round.selectedTeeName.isEmpty ? "" : " · \(round.selectedTeeName)"
+                            Text("距離 \(y) yd\(tee)")
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                        }
                         Text("選手をタップして打数・オリンピック・リーチ・舐め・あわやなどを入力します。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
+                    } header: {
+                        Text("ホール \(holeNumber) · パー \(hole.par)")
                     }
 
                     Section("スコア") {

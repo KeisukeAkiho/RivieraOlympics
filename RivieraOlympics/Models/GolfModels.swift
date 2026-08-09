@@ -385,6 +385,9 @@ struct GolfRound: Identifiable, Equatable {
     var holes: [HoleRecord] = []
     var options: RoundOptions = RoundOptions()
     var coursePars: [Int] = Array(repeating: 4, count: 18)
+    /// 選択中 Tee のホール別ヤード（0 = 未設定）
+    var courseYards: [Int] = Array(repeating: 0, count: 18)
+    var selectedTeeName: String = ""
     var courseId: UUID? = nil
     var courseName: String = ""
     /// 精算確定済み
@@ -393,10 +396,18 @@ struct GolfRound: Identifiable, Equatable {
     /// 確定時のスナップショット（生涯戦績用）
     var settledSummary: SettlementSummary? = nil
 
-    mutating func applyCourse(_ course: RegisteredCourse) {
+    var hasHoleYards: Bool { courseYards.contains(where: { $0 > 0 }) }
+
+    func yards(forHole holeNumber: Int) -> Int {
+        guard (1...18).contains(holeNumber), courseYards.count == 18 else { return 0 }
+        return courseYards[holeNumber - 1]
+    }
+
+    mutating func applyCourse(_ course: RegisteredCourse, teeName: String? = nil) {
         courseId = course.id
-        courseName = course.name
+        courseName = course.displayTitle
         coursePars = course.pars
+        applyTee(named: teeName ?? selectedTeeName, from: course)
         for i in holes.indices {
             let n = holes[i].holeNumber
             if (1...18).contains(n) {
@@ -405,22 +416,37 @@ struct GolfRound: Identifiable, Equatable {
         }
     }
 
+    mutating func applyTee(named teeName: String, from course: RegisteredCourse) {
+        let resolved: String = {
+            if course.tees.contains(where: { $0.name == teeName }) { return teeName }
+            if let preferred = course.tees.first(where: { $0.name == "Blue" })?.name { return preferred }
+            return course.tees.first?.name ?? ""
+        }()
+        selectedTeeName = resolved
+        if let tee = course.tees.first(where: { $0.name == resolved }) {
+            courseYards = CourseTee.normalizedYards(tee.yards)
+        } else {
+            courseYards = Array(repeating: 0, count: 18)
+        }
+    }
+
     static func newRound(
         title: String,
         registered: [RegisteredPlayer],
         pars: [Int] = Array(repeating: 4, count: 18),
         options: RoundOptions = RoundOptions(),
-        course: RegisteredCourse? = nil
+        course: RegisteredCourse? = nil,
+        teeName: String? = nil
     ) -> GolfRound {
         var round = GolfRound(title: title)
         round.players = registered.map { Player(from: $0) }
         round.options = options
         if let course {
-            round.courseId = course.id
-            round.courseName = course.name
-            round.coursePars = course.pars
+            round.applyCourse(course, teeName: teeName)
         } else {
             round.coursePars = pars.count == 18 ? pars : Array(repeating: 4, count: 18)
+            round.courseYards = Array(repeating: 0, count: 18)
+            round.selectedTeeName = ""
         }
         round.holes = (1...18).map { n in
             HoleRecord(
@@ -446,7 +472,8 @@ struct GolfRound: Identifiable, Equatable {
 
 extension GolfRound: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, title, date, players, holes, options, coursePars, courseId, courseName
+        case id, title, date, players, holes, options, coursePars, courseYards, selectedTeeName
+        case courseId, courseName
         case isSettled, settledAt, settledSummary
     }
 
@@ -459,6 +486,8 @@ extension GolfRound: Codable {
         holes = try c.decodeIfPresent([HoleRecord].self, forKey: .holes) ?? []
         options = try c.decodeIfPresent(RoundOptions.self, forKey: .options) ?? RoundOptions()
         coursePars = try c.decodeIfPresent([Int].self, forKey: .coursePars) ?? Array(repeating: 4, count: 18)
+        courseYards = CourseTee.normalizedYards(try c.decodeIfPresent([Int].self, forKey: .courseYards) ?? [])
+        selectedTeeName = try c.decodeIfPresent(String.self, forKey: .selectedTeeName) ?? ""
         courseId = try c.decodeIfPresent(UUID.self, forKey: .courseId)
         courseName = try c.decodeIfPresent(String.self, forKey: .courseName) ?? ""
         isSettled = try c.decodeIfPresent(Bool.self, forKey: .isSettled) ?? false

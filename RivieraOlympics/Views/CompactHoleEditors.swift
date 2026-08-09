@@ -67,6 +67,8 @@ struct CompactScoreEditor: View {
     let players: [Player]
     let holeNumber: Int
     let par: Int
+    var yards: Int = 0
+    var teeName: String = ""
     let onCommit: () -> Void
     let onCancel: () -> Void
 
@@ -74,9 +76,15 @@ struct CompactScoreEditor: View {
         NavigationStack {
             List {
                 Section {
-                    Text("パー \(par) を基準に矢印で調整。記号はスコアカードと同じです。")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    if yards > 0 {
+                        Text("パー \(par) · \(yards) yd\(teeName.isEmpty ? "" : "（\(teeName)）") を基準に矢印で調整。記号はスコアカードと同じです。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("パー \(par) を基準に矢印で調整。記号はスコアカードと同じです。")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("全員のスコア") {
@@ -168,6 +176,20 @@ struct CompactOlympicsEditor: View {
 
     private var canGoPrevious: Bool { playerIndex > 0 }
     private var canGoNext: Bool { playerIndex + 1 < playerCount }
+
+    /// 金銀銅鉄は1ホールにつき各1人まで（◆は複数可）
+    private static let exclusiveMedals: Set<OlympicMedal> = [.gold, .silver, .bronze, .iron]
+
+    private var exclusiveMedalsTakenByOthers: Set<OlympicMedal> {
+        guard let hole = round.holes.first(where: { $0.holeNumber == holeNumber }) else { return [] }
+        var taken = Set<OlympicMedal>()
+        for e in hole.entries where e.playerId != entry.playerId {
+            if let m = e.medal, Self.exclusiveMedals.contains(m) {
+                taken.insert(m)
+            }
+        }
+        return taken
+    }
 
     var body: some View {
         NavigationStack {
@@ -370,7 +392,7 @@ struct CompactOlympicsEditor: View {
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Stepper(value: $entry.putts, in: 0...8) {
-                    Text(entry.putts == 0 ? "—" : "\(entry.putts)")
+                    Text("\(entry.putts)")
                         .font(.title3.monospacedDigit().weight(.bold))
                         .foregroundStyle(.blue)
                         .frame(minWidth: 28, alignment: .trailing)
@@ -510,7 +532,10 @@ struct CompactOlympicsEditor: View {
 
     private func medalChip(_ medal: OlympicMedal?, _ title: String, _ icon: String) -> some View {
         let on = (medal == nil && entry.medal == nil) || (medal != nil && entry.medal == medal)
-        return chip(title: title, icon: icon, selected: on, tint: .yellow) {
+        let takenByOther = medal.map { exclusiveMedalsTakenByOthers.contains($0) } ?? false
+        let disabled = takenByOther && !on
+        return chip(title: title, icon: icon, selected: on, tint: .yellow, disabled: disabled) {
+            guard !disabled else { return }
             entry.medal = medal
             if medal == .diamond { entry.chipInFromOffGreen = true }
             if medal != .diamond && medal != nil { entry.chipInFromOffGreen = false }
@@ -523,7 +548,14 @@ struct CompactOlympicsEditor: View {
         }
     }
 
-    private func chip(title: String, icon: String? = nil, selected: Bool, tint: Color, action: @escaping () -> Void) -> some View {
+    private func chip(
+        title: String,
+        icon: String? = nil,
+        selected: Bool,
+        tint: Color,
+        disabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
                 if let icon {
@@ -537,15 +569,20 @@ struct CompactOlympicsEditor: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
-            .foregroundStyle(selected ? Color.white : tint)
-            .background(selected ? tint : tint.opacity(0.12))
+            .foregroundStyle(disabled ? Color.secondary : (selected ? Color.white : tint))
+            .background(disabled ? Color.secondary.opacity(0.12) : (selected ? tint : tint.opacity(0.12)))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(selected ? tint : tint.opacity(0.35), lineWidth: selected ? 2 : 1)
+                    .stroke(
+                        disabled ? Color.secondary.opacity(0.25) : (selected ? tint : tint.opacity(0.35)),
+                        lineWidth: selected && !disabled ? 2 : 1
+                    )
             )
+            .opacity(disabled ? 0.45 : 1)
         }
         .buttonStyle(.plain)
+        .disabled(disabled)
     }
 }
 

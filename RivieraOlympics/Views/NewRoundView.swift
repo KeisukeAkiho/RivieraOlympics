@@ -9,6 +9,11 @@ struct NewRoundView: View {
     @State private var playerSearch = ""
     @State private var options = RoundOptions()
     @State private var selectedCourseId: UUID?
+    @State private var selectedTeeName: String = ""
+
+    private var selectedCourse: RegisteredCourse? {
+        store.course(id: selectedCourseId)
+    }
 
     private var filteredPlayers: [RegisteredPlayer] {
         let q = playerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -42,10 +47,34 @@ struct NewRoundView: View {
                                 Text("\(c.displayTitle)（計\(c.totalPar)）").tag(Optional(c.id))
                             }
                         }
-                        if let course = store.course(id: selectedCourseId) {
+                        .onChange(of: selectedCourseId) { _, newId in
+                            guard let course = store.course(id: newId) else {
+                                selectedTeeName = ""
+                                return
+                            }
+                            selectedTeeName = course.tees.first(where: { $0.name == "Blue" })?.name
+                                ?? course.tees.first?.name
+                                ?? ""
+                        }
+                        if let course = selectedCourse {
                             Text("前\(course.pars.prefix(9).reduce(0, +)) / 後\(course.pars.suffix(9).reduce(0, +))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                            if !course.tees.isEmpty {
+                                Picker("Tee", selection: $selectedTeeName) {
+                                    ForEach(course.tees) { tee in
+                                        let total = tee.totalYards
+                                        Text(total > 0 ? "\(tee.name)（\(total) yd）" : tee.name)
+                                            .tag(tee.name)
+                                    }
+                                }
+                                if let tee = course.tees.first(where: { $0.name == selectedTeeName }),
+                                   tee.hasAnyYardage {
+                                    Text("ホール毎ヤードあり（作成後スコア表に表示）")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
                         }
                     }
                 }
@@ -104,7 +133,8 @@ struct NewRoundView: View {
                             title: title,
                             playerIds: ids,
                             options: options,
-                            courseId: selectedCourseId
+                            courseId: selectedCourseId,
+                            teeName: selectedTeeName.isEmpty ? nil : selectedTeeName
                         )
                         dismiss()
                     }

@@ -324,11 +324,20 @@ final class RoundStore: ObservableObject {
         return courses.first(where: { $0.id == id })
     }
 
-    func applyCourse(_ courseId: UUID, toRoundId roundId: UUID) {
+    func applyCourse(_ courseId: UUID, toRoundId roundId: UUID, teeName: String? = nil) {
         guard let course = course(id: courseId),
               let idx = rounds.firstIndex(where: { $0.id == roundId }),
               !rounds[idx].isSettled else { return }
-        rounds[idx].applyCourse(course)
+        rounds[idx].applyCourse(course, teeName: teeName)
+        save()
+    }
+
+    func applyTee(_ teeName: String, toRoundId roundId: UUID) {
+        guard let idx = rounds.firstIndex(where: { $0.id == roundId }),
+              !rounds[idx].isSettled,
+              let courseId = rounds[idx].courseId,
+              let course = course(id: courseId) else { return }
+        rounds[idx].applyTee(named: teeName, from: course)
         save()
     }
 
@@ -358,9 +367,29 @@ final class RoundStore: ObservableObject {
         }
         if changed {
             courses.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        }
+        let yardsFilled = backfillRoundYardsFromCourses()
+        if changed || yardsFilled {
             save()
         }
         return added
+    }
+
+    /// 既存ラウンドにコースは付いているが Tee ヤードが空のとき補完
+    @discardableResult
+    func backfillRoundYardsFromCourses() -> Bool {
+        var changed = false
+        for idx in rounds.indices {
+            guard let courseId = rounds[idx].courseId,
+                  let course = course(id: courseId),
+                  !course.tees.isEmpty else { continue }
+            let needsYards = !rounds[idx].hasHoleYards
+            let needsTeeName = rounds[idx].selectedTeeName.isEmpty
+            guard needsYards || needsTeeName else { continue }
+            rounds[idx].applyTee(named: rounds[idx].selectedTeeName, from: course)
+            changed = true
+        }
+        return changed
     }
 
     /// ナイン組み合わせを登録（既存 seedKey なら更新）
@@ -384,7 +413,8 @@ final class RoundStore: ObservableObject {
         title: String,
         playerIds: [UUID],
         options: RoundOptions = RoundOptions(),
-        courseId: UUID? = nil
+        courseId: UUID? = nil,
+        teeName: String? = nil
     ) {
         let selected = playerIds.compactMap { id in players.first(where: { $0.id == id }) }
         guard selected.count >= 2 else { return }
@@ -393,7 +423,8 @@ final class RoundStore: ObservableObject {
             title: title,
             registered: selected,
             options: options,
-            course: course
+            course: course,
+            teeName: teeName
         )
         rounds.insert(round, at: 0)
         activeRoundId = round.id

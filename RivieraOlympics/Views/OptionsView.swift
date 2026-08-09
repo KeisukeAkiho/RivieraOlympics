@@ -195,17 +195,30 @@ struct OptionsView: View {
                         }
                     }
                     .disabled(current.isSettled)
+
+                    if let course = store.course(id: current.courseId), !course.tees.isEmpty {
+                        Picker("Tee", selection: teePickBinding) {
+                            ForEach(course.tees) { tee in
+                                let total = tee.totalYards
+                                Text(total > 0 ? "\(tee.name)（\(total) yd）" : tee.name)
+                                    .tag(tee.name)
+                            }
+                        }
+                        .disabled(current.isSettled)
+                    }
                 }
 
                 ForEach(0..<18, id: \.self) { i in
+                    let yards = current.courseYards.indices.contains(i) ? current.courseYards[i] : 0
+                    let yardsLabel = yards > 0 ? " · \(yards) yd" : ""
                     Stepper(
-                        "ホール \(i + 1): パー \(current.coursePars[i])",
+                        "ホール \(i + 1): パー \(current.coursePars[i])\(yardsLabel)",
                         value: parBinding(hole: i),
                         in: 3...5
                     )
                     .disabled(current.isSettled)
                 }
-                Text("ステッパーで個別変更すると、登録コースとの紐づけは外れます。")
+                Text("ステッパーで個別変更すると、登録コースとの紐づけは外れます。Teeヤードはそのまま残ります。")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
@@ -342,6 +355,19 @@ struct OptionsView: View {
         )
     }
 
+    private var teePickBinding: Binding<String> {
+        Binding(
+            get: {
+                if !current.selectedTeeName.isEmpty { return current.selectedTeeName }
+                return store.course(id: current.courseId)?.tees.first?.name ?? ""
+            },
+            set: { name in
+                guard !name.isEmpty else { return }
+                store.applyTee(name, toRoundId: roundId)
+            }
+        )
+    }
+
     private func parBinding(hole: Int) -> Binding<Int> {
         Binding(
             get: { current.coursePars[hole] },
@@ -354,6 +380,7 @@ struct OptionsView: View {
                     // 個別変更したら登録コースとの一致は保証できない
                     r.courseId = nil
                     r.courseName = ""
+                    r.selectedTeeName = ""
                 }
             }
         )
