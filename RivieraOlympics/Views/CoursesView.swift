@@ -43,6 +43,89 @@ struct CoursesView: View {
                 }
             }
 
+            Section {
+                if store.courses.isEmpty {
+                    Text("まだコースがありません。")
+                        .foregroundStyle(.secondary)
+                } else if filtered.isEmpty {
+                    Text("「\(search)」に一致するコースがありません。")
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(filtered) { course in
+                    Button {
+                        editingCourse = course
+                        showEditor = true
+                    } label: {
+                        HStack(alignment: .center, spacing: 10) {
+                            Image(systemName: course.isFavorite ? "star.fill" : "star")
+                                .font(.title2)
+                                .foregroundStyle(course.isFavorite ? Color.orange : Color.secondary)
+                                .symbolRenderingMode(.monochrome)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    store.toggleFavoriteCourse(id: course.id)
+                                }
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(spacing: 6) {
+                                    if course.isFavorite {
+                                        Text("★")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.orange)
+                                    }
+                                    Text(course.displayTitle)
+                                        .font(.headline)
+                                        .foregroundStyle(.primary)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                HStack(spacing: 8) {
+                                    Text("パー計 \(course.totalPar)")
+                                    Text("前\(course.outPar)")
+                                    Text("後\(course.inPar)")
+                                    if !course.tees.isEmpty {
+                                        Text("Tee \(course.tees.count)")
+                                    }
+                                    if course.isBuiltIn {
+                                        Text("事前登録")
+                                            .foregroundStyle(RivieraTheme.fairway)
+                                    }
+                                }
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                if !course.outNineName.isEmpty || !course.inNineName.isEmpty {
+                                    Text("前半: \(course.outNineName.isEmpty ? "—" : course.outNineName) / 後半: \(course.inNineName.isEmpty ? "—" : course.inNineName)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .buttonStyle(.plain)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            store.toggleFavoriteCourse(id: course.id)
+                        } label: {
+                            Label(
+                                course.isFavorite ? "解除" : "お気に入り",
+                                systemImage: course.isFavorite ? "star.slash.fill" : "star.fill"
+                            )
+                        }
+                        .tint(.orange)
+                    }
+                }
+                .onDelete { idx in
+                    let ids = idx.map { filtered[$0].id }
+                    for id in ids { store.deleteCourse(id: id) }
+                }
+            } header: {
+                Text("登録済みコース")
+            } footer: {
+                Text("左の ★ または右スワイプでお気に入り。お気に入りは新規ラウンドのコース選択で先頭に表示されます。")
+            }
+
             ForEach(PhilippineCourseCatalog.clubsGroupedByRegion(), id: \.region) { group in
                 Section {
                     ForEach(group.clubs) { club in
@@ -67,53 +150,6 @@ struct CoursesView: View {
                     if group.region == PhilippineCourseCatalog.regionOrder.last {
                         Text("前半・後半で別ナインを選べるゴルフ場はここで組み合わせます。パーは公開スコアカードに基づく事前登録のため、現地スコアカードで確認してください。")
                     }
-                }
-            }
-
-            Section("登録済みコース") {
-                if store.courses.isEmpty {
-                    Text("まだコースがありません。")
-                        .foregroundStyle(.secondary)
-                } else if filtered.isEmpty {
-                    Text("「\(search)」に一致するコースがありません。")
-                        .foregroundStyle(.secondary)
-                }
-                ForEach(filtered) { course in
-                    Button {
-                        editingCourse = course
-                        showEditor = true
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(course.displayTitle)
-                                .font(.headline)
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.leading)
-                            HStack(spacing: 8) {
-                                Text("パー計 \(course.totalPar)")
-                                Text("前\(course.outPar)")
-                                Text("後\(course.inPar)")
-                                if !course.tees.isEmpty {
-                                    Text("Tee \(course.tees.count)")
-                                }
-                                if course.isBuiltIn {
-                                    Text("事前登録")
-                                        .foregroundStyle(RivieraTheme.fairway)
-                                }
-                            }
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            if !course.outNineName.isEmpty || !course.inNineName.isEmpty {
-                                Text("前半: \(course.outNineName.isEmpty ? "—" : course.outNineName) / 後半: \(course.inNineName.isEmpty ? "—" : course.inNineName)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-                .onDelete { idx in
-                    let ids = idx.map { filtered[$0].id }
-                    for id in ids { store.deleteCourse(id: id) }
                 }
             }
         }

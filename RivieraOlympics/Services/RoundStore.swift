@@ -243,6 +243,29 @@ final class RoundStore: ObservableObject {
         }
     }
 
+    // MARK: - Sort (favorites first)
+
+    private static func playerSort(_ a: RegisteredPlayer, _ b: RegisteredPlayer) -> Bool {
+        if a.isHidden != b.isHidden { return !a.isHidden }
+        if a.isFavorite != b.isFavorite { return a.isFavorite }
+        return a.name.localizedStandardCompare(b.name) == .orderedAscending
+    }
+
+    /// Players available for new rounds / default lists.
+    var activePlayers: [RegisteredPlayer] {
+        players.filter { !$0.isHidden }
+    }
+
+    /// Rounds shown on home by default.
+    var activeRounds: [GolfRound] {
+        rounds.filter { !$0.isArchived }
+    }
+
+    private static func courseSort(_ a: RegisteredCourse, _ b: RegisteredCourse) -> Bool {
+        if a.isFavorite != b.isFavorite { return a.isFavorite }
+        return a.name.localizedStandardCompare(b.name) == .orderedAscending
+    }
+
     // MARK: - Players
 
     func addPlayer(
@@ -263,14 +286,14 @@ final class RoundStore: ObservableObject {
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
             defaultHonestJohn: honestJohn
         ))
-        players.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        players.sort(by: Self.playerSort)
         save()
     }
 
     func updatePlayer(_ player: RegisteredPlayer) {
         guard let idx = players.firstIndex(where: { $0.id == player.id }) else { return }
         players[idx] = player
-        players.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        players.sort(by: Self.playerSort)
         // Keep names in open rounds in sync
         for rIdx in rounds.indices where !rounds[rIdx].isSettled {
             if let pIdx = rounds[rIdx].players.firstIndex(where: { $0.id == player.id }) {
@@ -278,6 +301,20 @@ final class RoundStore: ObservableObject {
                 rounds[rIdx].players[pIdx].honestJohnDeclared = player.defaultHonestJohn
             }
         }
+        save()
+    }
+
+    func toggleFavoritePlayer(id: UUID) {
+        guard let idx = players.firstIndex(where: { $0.id == id }) else { return }
+        players[idx].isFavorite.toggle()
+        players.sort(by: Self.playerSort)
+        save()
+    }
+
+    func toggleHiddenPlayer(id: UUID) {
+        guard let idx = players.firstIndex(where: { $0.id == id }) else { return }
+        players[idx].isHidden.toggle()
+        players.sort(by: Self.playerSort)
         save()
     }
 
@@ -295,7 +332,7 @@ final class RoundStore: ObservableObject {
         next.name = trimmed
         next.pars = RegisteredCourse.normalizedPars(next.pars)
         courses.append(next)
-        courses.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        courses.sort(by: Self.courseSort)
         save()
     }
 
@@ -306,11 +343,18 @@ final class RoundStore: ObservableObject {
         guard !next.name.isEmpty else { return }
         next.pars = RegisteredCourse.normalizedPars(next.pars)
         courses[idx] = next
-        courses.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        courses.sort(by: Self.courseSort)
         // Keep open round names in sync when linked
         for rIdx in rounds.indices where !rounds[rIdx].isSettled && rounds[rIdx].courseId == course.id {
             rounds[rIdx].applyCourse(next)
         }
+        save()
+    }
+
+    func toggleFavoriteCourse(id: UUID) {
+        guard let idx = courses.firstIndex(where: { $0.id == id }) else { return }
+        courses[idx].isFavorite.toggle()
+        courses.sort(by: Self.courseSort)
         save()
     }
 
@@ -366,7 +410,7 @@ final class RoundStore: ObservableObject {
             changed = true
         }
         if changed {
-            courses.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            courses.sort(by: Self.courseSort)
         }
         let yardsFilled = backfillRoundYardsFromCourses()
         if changed || yardsFilled {
@@ -399,7 +443,9 @@ final class RoundStore: ObservableObject {
         if let key = course.seedKey,
            let idx = courses.firstIndex(where: { $0.seedKey == key }) {
             course.id = courses[idx].id
+            course.isFavorite = courses[idx].isFavorite
             courses[idx] = course
+            courses.sort(by: Self.courseSort)
             save()
             return course
         }
@@ -437,9 +483,18 @@ final class RoundStore: ObservableObject {
         save()
     }
 
+    func toggleArchiveRound(id: UUID) {
+        guard let idx = rounds.firstIndex(where: { $0.id == id }) else { return }
+        rounds[idx].isArchived.toggle()
+        if rounds[idx].isArchived, activeRoundId == id {
+            activeRoundId = activeRounds.first?.id
+        }
+        save()
+    }
+
     func deleteRound(id: UUID) {
         rounds.removeAll { $0.id == id }
-        if activeRoundId == id { activeRoundId = rounds.first?.id }
+        if activeRoundId == id { activeRoundId = activeRounds.first?.id ?? rounds.first?.id }
         save()
     }
 
@@ -514,11 +569,9 @@ final class RoundStore: ObservableObject {
 
         if let data = try? Data(contentsOf: fileURL),
            let decoded = try? decoder.decode(AppPersistence.self, from: data) {
-            players = decoded.players
+            players = decoded.players.sorted(by: Self.playerSort)
             rounds = decoded.rounds
-            courses = decoded.courses.sorted {
-                $0.name.localizedStandardCompare($1.name) == .orderedAscending
-            }
+            courses = decoded.courses.sorted(by: Self.courseSort)
             customStakeRates = decoded.customStakeRates.sorted()
             customSettlementCaps = decoded.customSettlementCaps.sorted()
             rulePresets = decoded.rulePresets.sorted {
@@ -550,7 +603,7 @@ final class RoundStore: ObservableObject {
                     }
                 }
             }
-            players = map.values.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+            players = map.values.sorted(by: Self.playerSort)
             activeRoundId = decoded.first?.id
             ensureBuiltInCourses()
             save()

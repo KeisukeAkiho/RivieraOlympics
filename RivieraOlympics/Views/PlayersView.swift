@@ -5,17 +5,28 @@ struct PlayersView: View {
     @State private var showEditor = false
     @State private var editingPlayer: RegisteredPlayer?
     @State private var playerSearch = ""
+    @State private var showHidden = false
+    @State private var playerPendingDelete: RegisteredPlayer?
+    @State private var showPlayerDeleteConfirm = false
 
     private var filteredPlayers: [RegisteredPlayer] {
+        let base = showHidden ? store.players : store.activePlayers
         let q = playerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return store.players }
-        return store.players.filter { player in
-            player.name.localizedStandardContains(q)
-                || player.homeCourse.localizedStandardContains(q)
-                || player.homeTee.localizedStandardContains(q)
-                || player.handicap.localizedStandardContains(q)
-                || player.note.localizedStandardContains(q)
+        guard !q.isEmpty else { return base }
+        return base.filter { player in
+            Self.textMatches(player.name, q)
+                || Self.textMatches(player.homeCourse, q)
+                || Self.textMatches(player.homeTee, q)
+                || Self.textMatches(player.handicap, q)
+                || Self.textMatches(player.note, q)
         }
+    }
+
+    private static func textMatches(_ haystack: String, _ needle: String) -> Bool {
+        haystack.range(
+            of: needle,
+            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+        ) != nil
     }
 
     var body: some View {
@@ -30,51 +41,143 @@ struct PlayersView: View {
                 }
             }
 
-            Section("登録プレイヤー") {
+            Section {
+                Toggle("非表示も表示", isOn: $showHidden)
+            }
+
+            Section(showHidden ? "登録プレイヤー（非表示含む）" : "登録プレイヤー") {
                 if store.players.isEmpty {
                     Text("まだ登録がありません。上のボタンから名前・ホームコースなどを登録してください。")
                         .foregroundStyle(.secondary)
                 } else if filteredPlayers.isEmpty {
-                    Text("「\(playerSearch)」に一致するプレイヤーがいません。")
+                    Text(playerSearch.isEmpty
+                         ? "表示できるプレイヤーがいません。"
+                         : "「\(playerSearch)」に一致するプレイヤーがいません。")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(filteredPlayers) { p in
-                    NavigationLink {
-                        PlayerDetailView(playerId: p.id)
-                    } label: {
-                        let career = store.career(for: p.id)
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(p.name).font(.headline)
-                                Spacer()
-                                Text(yen(career.totalNetYen))
-                                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                                    .foregroundStyle(career.totalNetYen >= 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                    HStack(spacing: 8) {
+                        Image(systemName: p.isFavorite ? "star.fill" : "star")
+                            .font(.title2)
+                            .foregroundStyle(p.isFavorite ? Color.orange : Color.secondary)
+                            .symbolRenderingMode(.monochrome)
+                            .frame(width: 32, height: 32)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                store.toggleFavoritePlayer(id: p.id)
                             }
-                            if !p.homeCourse.isEmpty {
-                                Label(p.homeCourse, systemImage: "flag.fill")
-                                    .font(.caption)
+
+                        NavigationLink {
+                            PlayerDetailView(playerId: p.id)
+                        } label: {
+                            let career = store.career(for: p.id)
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    if p.isFavorite {
+                                        Text("★")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.orange)
+                                    }
+                                    Text(p.name).font(.headline)
+                                    if p.isHidden {
+                                        Text("非表示")
+                                            .font(.caption2.weight(.bold))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.secondary.opacity(0.2))
+                                            .clipShape(Capsule())
+                                    }
+                                    Spacer()
+                                    Text(yen(career.totalNetYen))
+                                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                                        .foregroundStyle(career.totalNetYen >= 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                                }
+                                if !p.homeCourse.isEmpty {
+                                    Label(p.homeCourse, systemImage: "flag.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                Text("\(career.roundsPlayed)戦 \(career.wins)勝\(career.losses)敗")
+                                    .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
-                            Text("\(career.roundsPlayed)戦 \(career.wins)勝\(career.losses)敗")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            .padding(.vertical, 2)
+                            .opacity(p.isHidden ? 0.65 : 1)
                         }
-                        .padding(.vertical, 2)
+
+                        Menu {
+                            Button {
+                                store.toggleFavoritePlayer(id: p.id)
+                            } label: {
+                                Label(
+                                    p.isFavorite ? "お気に入り解除" : "お気に入り",
+                                    systemImage: p.isFavorite ? "star.slash.fill" : "star.fill"
+                                )
+                            }
+                            Button {
+                                store.toggleHiddenPlayer(id: p.id)
+                            } label: {
+                                Label(
+                                    p.isHidden ? "再表示" : "非表示",
+                                    systemImage: p.isHidden ? "eye.fill" : "eye.slash.fill"
+                                )
+                            }
+                            Button(role: .destructive) {
+                                playerPendingDelete = p
+                                showPlayerDeleteConfirm = true
+                            } label: {
+                                Label("削除", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 36, height: 36)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.borderless)
                     }
-                }
-                .onDelete { idx in
-                    let targets = idx.map { filteredPlayers[$0].id }
-                    for id in targets {
-                        store.deletePlayer(id: id)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        Button(role: .destructive) {
+                            playerPendingDelete = p
+                            showPlayerDeleteConfirm = true
+                        } label: {
+                            Label("削除", systemImage: "trash")
+                        }
+                        Button {
+                            store.toggleHiddenPlayer(id: p.id)
+                        } label: {
+                            Label(
+                                p.isHidden ? "再表示" : "非表示",
+                                systemImage: p.isHidden ? "eye.fill" : "eye.slash.fill"
+                            )
+                        }
+                        .tint(.indigo)
                     }
                 }
             }
         }
         .navigationTitle("プレイヤー")
-        .searchable(text: $playerSearch, prompt: "名前・ホームコースで検索")
+        .searchable(
+            text: $playerSearch,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "名前・ホームコースで検索"
+        )
         .sheet(isPresented: $showEditor) {
             PlayerEditorSheet(player: editingPlayer)
+        }
+        .alert("プレイヤーを削除しますか？", isPresented: $showPlayerDeleteConfirm) {
+            Button("削除", role: .destructive) {
+                if let id = playerPendingDelete?.id {
+                    store.deletePlayer(id: id)
+                }
+                playerPendingDelete = nil
+            }
+            Button("キャンセル", role: .cancel) {
+                playerPendingDelete = nil
+            }
+        } message: {
+            Text("「\(playerPendingDelete?.name ?? "")」を完全に削除します。過去ラウンドの記録は残りますが、マスター一覧からは消えます。")
         }
     }
 
@@ -112,7 +215,7 @@ struct PlayerEditorSheet: View {
                         Picker("登録コースから選ぶ", selection: homeCoursePickBinding) {
                             Text("手入力／未選択").tag(Optional<UUID>.none)
                             ForEach(store.courses) { c in
-                                Text(c.name).tag(Optional(c.id))
+                                Text("\(c.isFavorite ? "★ " : "")\(c.name)").tag(Optional(c.id))
                             }
                         }
                         TextField("ホームコース", text: $homeCourse)
@@ -195,8 +298,10 @@ struct PlayerEditorSheet: View {
 
 struct PlayerDetailView: View {
     @EnvironmentObject private var store: RoundStore
+    @Environment(\.dismiss) private var dismiss
     let playerId: UUID
     @State private var showEditor = false
+    @State private var confirmDelete = false
 
     private var career: CareerStats { store.career(for: playerId) }
     private var player: RegisteredPlayer? { store.players.first(where: { $0.id == playerId }) }
@@ -217,10 +322,35 @@ struct PlayerDetailView: View {
                     if !p.note.isEmpty {
                         Text(p.note).font(.subheadline).foregroundStyle(.secondary)
                     }
+                    Button {
+                        store.toggleFavoritePlayer(id: p.id)
+                    } label: {
+                        Label(
+                            p.isFavorite ? "お気に入り解除" : "お気に入りに追加",
+                            systemImage: p.isFavorite ? "star.slash.fill" : "star.fill"
+                        )
+                        .foregroundStyle(Color.orange)
+                    }
+                    Button {
+                        store.toggleHiddenPlayer(id: p.id)
+                    } label: {
+                        Label(
+                            p.isHidden ? "一覧に再表示" : "一覧から非表示",
+                            systemImage: p.isHidden ? "eye.fill" : "eye.slash.fill"
+                        )
+                    }
                     if p.homeCourse.isEmpty && p.homeTee.isEmpty && p.handicap.isEmpty && p.note.isEmpty {
                         Text("ホームコース未登録")
                             .foregroundStyle(.secondary)
                     }
+                }
+
+                Section {
+                    Button("プレイヤーを削除", role: .destructive) {
+                        confirmDelete = true
+                    }
+                } footer: {
+                    Text("削除するとマスター一覧から消えます。過去ラウンドのスコア記録は残ります。")
                 }
             }
 
@@ -283,6 +413,15 @@ struct PlayerDetailView: View {
         .navigationTitle(career.name)
         .sheet(isPresented: $showEditor) {
             PlayerEditorSheet(player: player)
+        }
+        .alert("プレイヤーを削除しますか？", isPresented: $confirmDelete) {
+            Button("削除", role: .destructive) {
+                store.deletePlayer(id: playerId)
+                dismiss()
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("マスター一覧から完全に削除します。過去ラウンドのスコア記録は残ります。")
         }
     }
 

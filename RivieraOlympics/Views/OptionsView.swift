@@ -191,7 +191,8 @@ struct OptionsView: View {
                     Picker("登録コースを適用", selection: coursePickBinding) {
                         Text("選択…").tag(Optional<UUID>.none)
                         ForEach(store.courses) { c in
-                            Text("\(c.displayTitle)（計\(c.totalPar)）").tag(Optional(c.id))
+                            Text("\(c.isFavorite ? "★ " : "")\(c.displayTitle)（計\(c.totalPar)）")
+                                .tag(Optional(c.id))
                         }
                     }
                     .disabled(current.isSettled)

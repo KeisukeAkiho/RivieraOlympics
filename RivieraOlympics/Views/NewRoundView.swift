@@ -4,7 +4,7 @@ struct NewRoundView: View {
     @EnvironmentObject private var store: RoundStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var title = "リビエラ ラウンド"
+    @State private var title = Self.defaultRoundTitle()
     @State private var selected: Set<UUID> = []
     @State private var playerSearch = ""
     @State private var options = RoundOptions()
@@ -16,16 +16,27 @@ struct NewRoundView: View {
     }
 
     private var filteredPlayers: [RegisteredPlayer] {
+        let base = store.activePlayers
         let q = playerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
-        let sorted = store.players.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        guard !q.isEmpty else { return sorted }
-        return sorted.filter { player in
-            player.name.localizedStandardContains(q)
-                || player.homeCourse.localizedStandardContains(q)
-                || player.homeTee.localizedStandardContains(q)
-                || player.handicap.localizedStandardContains(q)
-                || player.note.localizedStandardContains(q)
+        guard !q.isEmpty else { return base }
+        return base.filter { player in
+            Self.textMatches(player.name, q)
+                || Self.textMatches(player.homeCourse, q)
+                || Self.textMatches(player.homeTee, q)
+                || Self.textMatches(player.handicap, q)
+                || Self.textMatches(player.note, q)
         }
+    }
+
+    private static func textMatches(_ haystack: String, _ needle: String) -> Bool {
+        haystack.range(
+            of: needle,
+            options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+        ) != nil
+    }
+
+    private var selectedPlayersInOrder: [RegisteredPlayer] {
+        store.activePlayers.filter { selected.contains($0.id) }
     }
 
     var body: some View {
@@ -44,7 +55,7 @@ struct NewRoundView: View {
                         Picker("コース", selection: $selectedCourseId) {
                             Text("指定なし（すべてパー4）").tag(Optional<UUID>.none)
                             ForEach(store.courses) { c in
-                                Text("\(c.displayTitle)（計\(c.totalPar)）").tag(Optional(c.id))
+                                Text(coursePickerLabel(c)).tag(Optional(c.id))
                             }
                         }
                         .onChange(of: selectedCourseId) { _, newId in
@@ -81,36 +92,98 @@ struct NewRoundView: View {
 
                 CompetitionGamesSection(options: $options)
 
+                if !selectedPlayersInOrder.isEmpty {
+                    Section("選択中") {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(selectedPlayersInOrder) { p in
+                                    Button {
+                                        selected.remove(p.id)
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Text(p.name)
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.caption)
+                                        }
+                                        .font(.subheadline)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(RivieraTheme.fairway.opacity(0.18))
+                                        .clipShape(Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+
                 Section {
-                    if store.players.isEmpty {
-                        Text("先に「プレイヤー」タブで登録してください。")
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("名前・ホームコースで検索", text: $playerSearch)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .submitLabel(.search)
+                        if !playerSearch.isEmpty {
+                            Button {
+                                playerSearch = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    if store.activePlayers.isEmpty {
+                        Text("先に「プレイヤー」タブで登録してください（非表示でない選手が2人以上必要）。")
                             .foregroundStyle(.secondary)
                     } else if filteredPlayers.isEmpty {
                         Text("「\(playerSearch)」に一致するプレイヤーがいません。")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(filteredPlayers) { p in
-                            Toggle(isOn: Binding(
-                                get: { selected.contains(p.id) },
-                                set: { on in
-                                    if on { selected.insert(p.id) } else { selected.remove(p.id) }
+                            Button {
+                                if selected.contains(p.id) {
+                                    selected.remove(p.id)
+                                } else {
+                                    selected.insert(p.id)
                                 }
-                            )) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(p.name)
-                                    if !p.homeCourse.isEmpty {
-                                        Text(p.homeCourse)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: selected.contains(p.id) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selected.contains(p.id) ? RivieraTheme.fairway : .secondary)
+                                        .font(.title3)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack(spacing: 6) {
+                                            Text(p.name)
+                                                .foregroundStyle(.primary)
+                                            if p.isFavorite {
+                                                Image(systemName: "star.fill")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(Color.orange)
+                                            }
+                                        }
+                                        if !p.homeCourse.isEmpty {
+                                            Text(p.homeCourse)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
+                                    Spacer(minLength: 0)
                                 }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 } header: {
                     Text("参加プレイヤー（2人以上）")
                 } footer: {
-                    Text("選択中 \(selected.count) 人")
+                    Text("上の欄で絞り込んでタップ選択。選択中 \(selected.count) 人")
                         .foregroundStyle(selected.count >= 2 ? Color.secondary : RivieraTheme.flag)
                 }
 
@@ -121,14 +194,13 @@ struct NewRoundView: View {
                 }
             }
             .navigationTitle("新しいラウンド")
-            .searchable(text: $playerSearch, prompt: "参加プレイヤーを検索")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("キャンセル") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("作成") {
-                        let ids = store.players.map(\.id).filter { selected.contains($0) }
+                        let ids = store.activePlayers.map(\.id).filter { selected.contains($0) }
                         store.createRound(
                             title: title,
                             playerIds: ids,
@@ -143,7 +215,22 @@ struct NewRoundView: View {
             }
             .onAppear {
                 store.applyActiveRules(to: &options)
+                if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    title = Self.defaultRoundTitle()
+                }
             }
         }
+    }
+
+    private func coursePickerLabel(_ c: RegisteredCourse) -> String {
+        let star = c.isFavorite ? "★ " : ""
+        return "\(star)\(c.displayTitle)（計\(c.totalPar)）"
+    }
+
+    private static func defaultRoundTitle(for date: Date = Date()) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
     }
 }

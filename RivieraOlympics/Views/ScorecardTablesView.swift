@@ -223,6 +223,7 @@ struct ScorecardTablesView: View {
                 tint: RivieraTheme.fairway.opacity(0.15),
                 round: round,
                 olympicsFocus: false,
+                includeParsRow: true,
                 includeYardsRow: round.hasHoleYards
             )
 
@@ -276,6 +277,7 @@ struct ScorecardTablesView: View {
         olympicsFocus: Bool,
         skipHeader: Bool = false,
         rowHeight: CGFloat? = nil,
+        includeParsRow: Bool = false,
         includeYardsRow: Bool = false
     ) -> some View {
         let h = rowHeight ?? cellHeight
@@ -284,23 +286,28 @@ struct ScorecardTablesView: View {
                 cellText(title, bold: true, width: nameWidth, height: cellHeight)
                     .background(tint)
             }
+            if includeParsRow {
+                cellText("Par", bold: true, width: nameWidth, height: yardsRowHeight)
+                    .background(RivieraTheme.fairway.opacity(0.14))
+            }
             if includeYardsRow {
                 let label = round.selectedTeeName.isEmpty ? "yd" : round.selectedTeeName
                 cellText(label, bold: true, width: nameWidth, height: yardsRowHeight)
                     .background(RivieraTheme.fairway.opacity(0.10))
             }
-            ForEach(round.players) { p in
+            ForEach(Array(round.players.enumerated()), id: \.element.id) { index, p in
                 let focused = olympicsFocus && olympicsFocusPlayerId == p.id
+                let theme = PlayerTheme.color(at: index)
                 Text(focused ? "▶\(p.name)" : p.name)
                     .font(.system(size: 10, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.45)
                     .frame(width: nameWidth, height: h)
-                    .overlay(Rectangle().stroke(Color.secondary.opacity(0.25), lineWidth: 0.5))
-                    .background(focused ? Color.yellow.opacity(0.55) : Color.clear)
+                    .overlay(Rectangle().stroke(theme.opacity(0.45), lineWidth: 0.5))
+                    .background(PlayerTheme.rowFill(at: index, focused: focused))
                     .overlay(
                         RoundedRectangle(cornerRadius: 0)
-                            .stroke(focused ? RivieraTheme.fairway : .clear, lineWidth: 2)
+                            .stroke(focused ? theme : .clear, lineWidth: 2)
                     )
             }
         }
@@ -315,6 +322,7 @@ struct ScorecardTablesView: View {
                 nineTint: RivieraTheme.fairway.opacity(0.22),
                 totalTint: RivieraTheme.fairway.opacity(0.28)
             )
+            nineSplitParsRow(round: round)
             if round.hasHoleYards {
                 nineSplitYardsRow(round: round)
             }
@@ -397,18 +405,17 @@ struct ScorecardTablesView: View {
                     }
                     let out = pointsSum(map: map, playerId: p.id, holes: 1...9)
                     cellText(out == 0 ? "—" : "\(out)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.yellow.opacity(0.28) : Color.orange.opacity(0.10))
+                        .background(rowFocused ? Color.orange.opacity(0.18) : Color.orange.opacity(0.10))
                     ForEach(10...18, id: \.self) { h in
                         olympicsHoleButton(round: round, playerId: p.id, hole: h, map: map, rowFocused: rowFocused)
                     }
                     let inn = pointsSum(map: map, playerId: p.id, holes: 10...18)
                     cellText(inn == 0 ? "—" : "\(inn)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.yellow.opacity(0.28) : Color.orange.opacity(0.10))
+                        .background(rowFocused ? Color.orange.opacity(0.18) : Color.orange.opacity(0.10))
                     let tot = out + inn
                     cellText(tot == 0 ? "—" : "\(tot)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.yellow.opacity(0.35) : Color(.tertiarySystemFill))
+                        .background(rowFocused ? Color.orange.opacity(0.22) : Color(.tertiarySystemFill))
                 }
-                .background(rowFocused ? Color.yellow.opacity(0.12) : Color.clear)
             }
         }
     }
@@ -453,6 +460,34 @@ struct ScorecardTablesView: View {
                 .background(nineTint)
             cellText("計", bold: true, width: cellWidth, height: cellHeight)
                 .background(totalTint)
+        }
+    }
+
+    private func nineSplitParsRow(round: GolfRound) -> some View {
+        let tint = RivieraTheme.fairway.opacity(0.12)
+        let nineTint = RivieraTheme.fairway.opacity(0.18)
+        let out = round.coursePars.prefix(9).reduce(0, +)
+        let inn = round.coursePars.suffix(9).reduce(0, +)
+        let tot = out + inn
+        return HStack(spacing: 0) {
+            ForEach(1...9, id: \.self) { h in
+                let par = round.holes.first(where: { $0.holeNumber == h })?.par
+                    ?? (round.coursePars.indices.contains(h - 1) ? round.coursePars[h - 1] : 4)
+                cellText("\(par)", bold: true, width: cellWidth, height: yardsRowHeight)
+                    .background(tint)
+            }
+            cellText("\(out)", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(nineTint)
+            ForEach(10...18, id: \.self) { h in
+                let par = round.holes.first(where: { $0.holeNumber == h })?.par
+                    ?? (round.coursePars.indices.contains(h - 1) ? round.coursePars[h - 1] : 4)
+                cellText("\(par)", bold: true, width: cellWidth, height: yardsRowHeight)
+                    .background(tint)
+            }
+            cellText("\(inn)", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(nineTint)
+            cellText("\(tot)", bold: true, width: cellWidth, height: yardsRowHeight)
+                .background(RivieraTheme.fairway.opacity(0.24))
         }
     }
 
@@ -513,7 +548,7 @@ struct ScorecardTablesView: View {
         }
         .frame(width: cellWidth, height: cellHeight)
         .clipped()
-        .background(focused ? Color.yellow.opacity(0.65) : (rowFocused ? Color.yellow.opacity(0.18) : Color.clear))
+        .background(focused ? Color.yellow.opacity(0.55) : (rowFocused ? Color.yellow.opacity(0.12) : Color.clear))
         .contentShape(Rectangle())
         .overlay(
             Rectangle().stroke(

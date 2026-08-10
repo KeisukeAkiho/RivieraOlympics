@@ -2,8 +2,10 @@ import SwiftUI
 
 struct RoundDetailView: View {
     @EnvironmentObject private var store: RoundStore
+    @Environment(\.dismiss) private var dismiss
     let roundId: UUID
     @State private var showGames = false
+    @State private var showDeleteConfirm = false
 
     private var round: GolfRound? {
         store.rounds.first(where: { $0.id == roundId })
@@ -53,12 +55,42 @@ struct RoundDetailView: View {
                 }
                 .navigationTitle(round.title)
                 .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                store.toggleArchiveRound(id: roundId)
+                            } label: {
+                                Label(
+                                    round.isArchived ? "アーカイブから復元" : "アーカイブ（非表示）",
+                                    systemImage: round.isArchived ? "tray.and.arrow.up.fill" : "archivebox.fill"
+                                )
+                            }
+                            Button(role: .destructive) {
+                                showDeleteConfirm = true
+                            } label: {
+                                Label("ラウンドを削除", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                    }
+                }
                 .onAppear { store.activeRoundId = roundId }
                 .sheet(isPresented: $showGames) {
                     NavigationStack {
                         CompetitionGamesView(roundId: roundId)
                             .environmentObject(store)
                     }
+                }
+                .alert("ラウンドを削除しますか？", isPresented: $showDeleteConfirm) {
+                    Button("削除", role: .destructive) {
+                        store.deleteRound(id: roundId)
+                        dismiss()
+                    }
+                    Button("キャンセル", role: .cancel) {}
+                } message: {
+                    Text("「\(round.title)」を完全に削除します。この操作は元に戻せません。")
                 }
             } else {
                 ContentUnavailableView("ラウンドが見つかりません", systemImage: "flag.slash")

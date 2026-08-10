@@ -40,6 +40,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UIRequiresFullScreen: YES
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "精算結果のエクスポート画像を写真アプリに保存します。"
         INFOPLIST_FILE: RivieraOlympics/Info.plist
         GENERATE_INFOPLIST_FILE: YES
         CURRENT_PROJECT_VERSION: 1

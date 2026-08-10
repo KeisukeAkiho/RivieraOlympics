@@ -36,11 +36,14 @@ struct RegisteredPlayer: Identifiable, Hashable {
     var note: String = ""
     var defaultHonestJohn: Int = 90
     var createdAt: Date = Date()
+    var isFavorite: Bool = false
+    /// Soft-hide from pickers / default lists (data kept).
+    var isHidden: Bool = false
 }
 
 extension RegisteredPlayer: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, name, homeCourse, homeTee, handicap, note, defaultHonestJohn, createdAt
+        case id, name, homeCourse, homeTee, handicap, note, defaultHonestJohn, createdAt, isFavorite, isHidden
     }
 
     init(from decoder: Decoder) throws {
@@ -53,6 +56,8 @@ extension RegisteredPlayer: Codable {
         note = try c.decodeIfPresent(String.self, forKey: .note) ?? ""
         defaultHonestJohn = try c.decodeIfPresent(Int.self, forKey: .defaultHonestJohn) ?? 90
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+        isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        isHidden = try c.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
     }
 }
 
@@ -105,6 +110,7 @@ struct RegisteredCourse: Identifiable, Hashable, Equatable {
     var isBuiltIn: Bool = false
     /// ティー別ホール距離（ヤード）
     var tees: [CourseTee] = []
+    var isFavorite: Bool = false
 
     static let defaultPars: [Int] = Array(repeating: 4, count: 18)
 
@@ -130,7 +136,8 @@ struct RegisteredCourse: Identifiable, Hashable, Equatable {
         inNineName: String = "",
         seedKey: String? = nil,
         isBuiltIn: Bool = false,
-        tees: [CourseTee] = []
+        tees: [CourseTee] = [],
+        isFavorite: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -146,6 +153,7 @@ struct RegisteredCourse: Identifiable, Hashable, Equatable {
         self.tees = tees.map {
             CourseTee(id: $0.id, name: $0.name, yards: CourseTee.normalizedYards($0.yards))
         }
+        self.isFavorite = isFavorite
     }
 
     static func normalizedPars(_ pars: [Int]) -> [Int] {
@@ -160,7 +168,7 @@ struct RegisteredCourse: Identifiable, Hashable, Equatable {
 extension RegisteredCourse: Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, pars, note, createdAt
-        case clubName, layoutName, outNineName, inNineName, seedKey, isBuiltIn, tees
+        case clubName, layoutName, outNineName, inNineName, seedKey, isBuiltIn, tees, isFavorite
     }
 
     init(from decoder: Decoder) throws {
@@ -177,6 +185,23 @@ extension RegisteredCourse: Codable {
         seedKey = try c.decodeIfPresent(String.self, forKey: .seedKey)
         isBuiltIn = try c.decodeIfPresent(Bool.self, forKey: .isBuiltIn) ?? (seedKey != nil)
         tees = try c.decodeIfPresent([CourseTee].self, forKey: .tees) ?? []
+        isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+    }
+}
+
+extension GolfRound {
+    /// Short course label for list rows (~10 characters).
+    var shortCourseLabel: String {
+        let raw = courseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return "" }
+        if raw.count <= 10 { return raw }
+        let end = raw.index(raw.startIndex, offsetBy: 10)
+        return String(raw[..<end])
+    }
+
+    var listTitleWithCourse: String {
+        let course = shortCourseLabel
+        return course.isEmpty ? title : "\(title) · \(course)"
     }
 }
 
@@ -395,6 +420,8 @@ struct GolfRound: Identifiable, Equatable {
     var settledAt: Date? = nil
     /// 確定時のスナップショット（生涯戦績用）
     var settledSummary: SettlementSummary? = nil
+    /// Soft-hide from home list (data kept for career / reopen).
+    var isArchived: Bool = false
 
     var hasHoleYards: Bool { courseYards.contains(where: { $0 > 0 }) }
 
@@ -474,7 +501,7 @@ extension GolfRound: Codable {
     enum CodingKeys: String, CodingKey {
         case id, title, date, players, holes, options, coursePars, courseYards, selectedTeeName
         case courseId, courseName
-        case isSettled, settledAt, settledSummary
+        case isSettled, settledAt, settledSummary, isArchived
     }
 
     init(from decoder: Decoder) throws {
@@ -493,6 +520,7 @@ extension GolfRound: Codable {
         isSettled = try c.decodeIfPresent(Bool.self, forKey: .isSettled) ?? false
         settledAt = try c.decodeIfPresent(Date.self, forKey: .settledAt)
         settledSummary = try c.decodeIfPresent(SettlementSummary.self, forKey: .settledSummary)
+        isArchived = try c.decodeIfPresent(Bool.self, forKey: .isArchived) ?? false
     }
 }
 

@@ -88,8 +88,8 @@ struct CompactScoreEditor: View {
                 }
 
                 Section("全員のスコア") {
-                    ForEach(players) { player in
-                        playerRow(player)
+                    ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
+                        playerRow(player, themeIndex: index)
                     }
                 }
 
@@ -119,15 +119,20 @@ struct CompactScoreEditor: View {
         }
     }
 
-    private func playerRow(_ player: Player) -> some View {
+    private func playerRow(_ player: Player, themeIndex: Int) -> some View {
         let strokes = strokesByPlayer[player.id, default: 0]
         let toPar = strokes > 0 ? strokes - par : 0
         let entered = strokes > 0
+        let theme = PlayerTheme.color(at: themeIndex)
         return HStack(spacing: 10) {
+            Text(player.name)
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 4)
+                .background(theme.opacity(0.22))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text(player.name)
-                    .font(.subheadline.weight(.semibold))
-                    .lineLimit(1)
                 Text(entered
                      ? "\(ScorecardSymbol.menuTitle(toPar: toPar))  ·  \(strokes)打"
                      : "クリア済")
@@ -176,6 +181,7 @@ struct CompactOlympicsEditor: View {
 
     private var canGoPrevious: Bool { playerIndex > 0 }
     private var canGoNext: Bool { playerIndex + 1 < playerCount }
+    private var themeIndex: Int { playerIndex }
 
     /// 金銀銅鉄は1ホールにつき各1人まで（◆は複数可）
     private static let exclusiveMedals: Set<OlympicMedal> = [.gold, .silver, .bronze, .iron]
@@ -338,12 +344,16 @@ struct CompactOlympicsEditor: View {
         .padding(.vertical, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            LinearGradient(colors: [RivieraTheme.fairwayDeep, RivieraTheme.fairway], startPoint: .leading, endPoint: .trailing)
+            LinearGradient(
+                colors: PlayerTheme.bannerColors(at: themeIndex),
+                startPoint: .leading,
+                endPoint: .trailing
+            )
         )
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.yellow.opacity(0.7), lineWidth: 1.5)
+                .stroke(Color.white.opacity(0.65), lineWidth: 1.5)
         )
     }
 

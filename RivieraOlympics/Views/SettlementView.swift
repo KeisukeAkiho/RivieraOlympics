@@ -5,6 +5,7 @@ struct SettlementView: View {
     var roundId: UUID? = nil
     /// 互換: 直接 round を渡す場合
     var round: GolfRound? = nil
+    @State private var showExport = false
 
     private var resolved: GolfRound? {
         if let roundId, let r = store.rounds.first(where: { $0.id == roundId }) { return r }
@@ -126,6 +127,12 @@ struct SettlementView: View {
                     }
 
                     Section("操作") {
+                        Button {
+                            showExport = true
+                        } label: {
+                            Label("写真としてエクスポート", systemImage: "photo.on.rectangle.angled")
+                        }
+
                         if r.isSettled {
                             Button("精算を解除（再編集）", role: .destructive) {
                                 store.unsettleRound(id: r.id)
@@ -151,6 +158,19 @@ struct SettlementView: View {
                     }
                 }
                 .navigationTitle("精算")
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showExport = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                        .accessibilityLabel("写真としてエクスポート")
+                    }
+                }
+                .sheet(isPresented: $showExport) {
+                    SettlementExportSheet(round: r, summary: summary)
+                }
             } else {
                 ContentUnavailableView(
                     "アクティブなラウンドがありません",

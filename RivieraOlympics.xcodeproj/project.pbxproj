@@ -12,6 +12,7 @@
 		19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAE970B8B43B209F4616D085 /* RoundStore.swift */; };
 		1F8803693529894ADED0B1B8 /* HoleEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3481BBD078BF959BB6225F9C /* HoleEntryView.swift */; };
 		20BA1CEBCE759348AB1384D9 /* OlympicsRulesPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4574D6A93E5F32B1734CBB33 /* OlympicsRulesPage.swift */; };
+		21801E1C55D44851864EB36D /* RoundsCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 684BC8FB01233F06FBC5BC7E /* RoundsCalendarView.swift */; };
 		251BD5AE886223FCB1D50F82 /* Rulebook.md in Resources */ = {isa = PBXBuildFile; fileRef = EDFED712CA110BA1EEFE1EBF /* Rulebook.md */; };
 		2752D8DE55A9D1CAFAA7D5BD /* PlayersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91518199FC77AFFE421985DC /* PlayersView.swift */; };
 		29E3A079AFECEA66BF4CCF42 /* CompetitionGamesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3044E14521EB9E7AA5960847 /* CompetitionGamesSection.swift */; };
@@ -26,6 +27,7 @@
 		90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */; };
 		92B8ACB930F1303AB764808A /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19978D40D91470300263C170 /* RootView.swift */; };
 		9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A591CD2060D90074D3A1C9 /* OlympicsStatus.swift */; };
+		95FAE46E0EC6877C8486CB2F /* SettlementExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C026F454DAEEF82723AA000 /* SettlementExportView.swift */; };
 		97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E1F41699A807FFC20DF7212 /* RulebookComponents.swift */; };
 		A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F82B53000B816E362CA976D /* RulebookView.swift */; };
 		C149286A708EFE83A4AB6655 /* PhilippineCourseCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6902F8209B12C32517D72A0D /* PhilippineCourseCatalog.swift */; };
@@ -56,7 +58,9 @@
 		51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionsView.swift; sourceTree = "<group>"; };
 		5F82B53000B816E362CA976D /* RulebookView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RulebookView.swift; sourceTree = "<group>"; };
 		61FF14B06B4C68DDD91C5B69 /* RivieraOlympics.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RivieraOlympics.entitlements; sourceTree = "<group>"; };
+		684BC8FB01233F06FBC5BC7E /* RoundsCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundsCalendarView.swift; sourceTree = "<group>"; };
 		6902F8209B12C32517D72A0D /* PhilippineCourseCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhilippineCourseCatalog.swift; sourceTree = "<group>"; };
+		6C026F454DAEEF82723AA000 /* SettlementExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettlementExportView.swift; sourceTree = "<group>"; };
 		732DB7521046D0E164401127 /* RivieraOlympicsRules.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = RivieraOlympicsRules.pdf; sourceTree = "<group>"; };
 		73DFC2E13466FD528F11866D /* RuleParametersPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuleParametersPage.swift; sourceTree = "<group>"; };
 		750305254EE4804FAA954C6F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -131,9 +135,11 @@
 				91518199FC77AFFE421985DC /* PlayersView.swift */,
 				19978D40D91470300263C170 /* RootView.swift */,
 				80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */,
+				684BC8FB01233F06FBC5BC7E /* RoundsCalendarView.swift */,
 				5F82B53000B816E362CA976D /* RulebookView.swift */,
 				73DFC2E13466FD528F11866D /* RuleParametersPage.swift */,
 				E5D313924BFE9AE04B165339 /* ScorecardTablesView.swift */,
+				6C026F454DAEEF82723AA000 /* SettlementExportView.swift */,
 				F1B86EDE75DB3774F1C143A2 /* SettlementView.swift */,
 				1085375D170CBF9DBB2103A6 /* Rulebook */,
 			);
@@ -300,10 +306,12 @@
 				92B8ACB930F1303AB764808A /* RootView.swift in Sources */,
 				90F6EF2AF222ABAA33667C8C /* RoundDetailView.swift in Sources */,
 				19B2E6A0F3D5356669227765 /* RoundStore.swift in Sources */,
+				21801E1C55D44851864EB36D /* RoundsCalendarView.swift in Sources */,
 				CA4FBEA01881A050248808A5 /* RuleParametersPage.swift in Sources */,
 				97E8AC4DEABE7E5B7D43C6BF /* RulebookComponents.swift in Sources */,
 				A2A17F96192399DFE17492A3 /* RulebookView.swift in Sources */,
 				C716AF40CED1F542E5AB247B /* ScorecardTablesView.swift in Sources */,
+				95FAE46E0EC6877C8486CB2F /* SettlementExportView.swift in Sources */,
 				517F8BA1955CF82BE019460D /* SettlementView.swift in Sources */,
 				5A403F5D7BAC312EA9E9BFAA /* SideGameCalculators.swift in Sources */,
 			);
@@ -322,6 +330,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RivieraOlympics/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "リビエラオリンピック";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "精算結果のエクスポート画像を写真アプリに保存します。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
@@ -474,6 +483,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = RivieraOlympics/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "リビエラオリンピック";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "精算結果のエクスポート画像を写真アプリに保存します。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UIRequiresFullScreen = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
