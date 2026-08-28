@@ -39,6 +39,7 @@
 		E5B94FE90B7985A4B135CF23 /* OlympicsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 512B674DC18FD0C3946CEE5C /* OlympicsCalculator.swift */; };
 		E9BA3704CEA1765C9370998F /* CompactHoleEditors.swift in Sources */ = {isa = PBXBuildFile; fileRef = A14C36CD547D1516298D8C9C /* CompactHoleEditors.swift */; };
 		F0E024582B9FFA3370CB9595 /* GolfModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C3072A536E1644CB9F9489 /* GolfModels.swift */; };
+		F1DAF8AEAB966EA47D67DB17 /* OlympicQuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B445FBB50E7A4324F441A36 /* OlympicQuickActions.swift */; };
 		F4D1E26F106D962FEA0AAF03 /* GameRulesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CE24C41C0AA30A2525D1CA2 /* GameRulesSettingsView.swift */; };
 		FD64E5521C3EDC511E275931 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2F6F6C386C7FF70EC1A14380 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
@@ -66,6 +67,7 @@
 		750305254EE4804FAA954C6F /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		7CE24C41C0AA30A2525D1CA2 /* GameRulesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameRulesSettingsView.swift; sourceTree = "<group>"; };
 		80B8FA545F8C7D65A33D2D31 /* RoundDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoundDetailView.swift; sourceTree = "<group>"; };
+		8B445FBB50E7A4324F441A36 /* OlympicQuickActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OlympicQuickActions.swift; sourceTree = "<group>"; };
 		91518199FC77AFFE421985DC /* PlayersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayersView.swift; sourceTree = "<group>"; };
 		962C80D94591DB7AEF63C3AF /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9EA51DDE80CBB63037F9039E /* OfficialPDFPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialPDFPage.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				3481BBD078BF959BB6225F9C /* HoleEntryView.swift */,
 				750305254EE4804FAA954C6F /* HomeView.swift */,
 				07D03AAE8E1D1B3FEA25E592 /* NewRoundView.swift */,
+				8B445FBB50E7A4324F441A36 /* OlympicQuickActions.swift */,
 				51AC485BA3DE2D5EA260FB8C /* OptionsView.swift */,
 				91518199FC77AFFE421985DC /* PlayersView.swift */,
 				19978D40D91470300263C170 /* RootView.swift */,
@@ -294,6 +297,7 @@
 				DF31A3CCFBC78D243771A3A5 /* HomeView.swift in Sources */,
 				3026C650496E5A690B0151B2 /* NewRoundView.swift in Sources */,
 				0BEFF0BAF89BDDFDC72A7916 /* OfficialPDFPage.swift in Sources */,
+				F1DAF8AEAB966EA47D67DB17 /* OlympicQuickActions.swift in Sources */,
 				E5B94FE90B7985A4B135CF23 /* OlympicsCalculator.swift in Sources */,
 				20BA1CEBCE759348AB1384D9 /* OlympicsRulesPage.swift in Sources */,
 				9305333A28856CE8F0CD5E8C /* OlympicsStatus.swift in Sources */,

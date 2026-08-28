@@ -54,24 +54,38 @@ enum OlympicsStatus {
 
     /// 下書きエントリを差し込んだホールの速報点
     static func previewPoints(round: GolfRound, holeNumber: Int, draft: PlayerHoleEntry) -> (total: Int, lines: [PointLine], reachApplied: Bool) {
-        guard let hole = round.holes.first(where: { $0.holeNumber == holeNumber }) else {
+        let result = previewHole(round: round, holeNumber: holeNumber, drafts: [draft.playerId: draft])
+        guard let mine = result.perPlayer.first(where: { $0.playerId == draft.playerId }) else {
             return (0, [], false)
         }
-        var patched = hole
-        if let idx = patched.entries.firstIndex(where: { $0.playerId == draft.playerId }) {
-            patched.entries[idx] = draft
+        return (mine.totalPoints, mine.lines, mine.reachApplied)
+    }
+
+    static func previewHole(
+        round: GolfRound,
+        holeNumber: Int,
+        drafts: [UUID: PlayerHoleEntry]
+    ) -> HoleOlympicsResult {
+        guard var hole = round.holes.first(where: { $0.holeNumber == holeNumber }) else {
+            return HoleOlympicsResult(holeNumber: holeNumber, nearestPinCarryOut: 0, perPlayer: [])
         }
-        let result = OlympicsCalculator.scoreHole(
-            hole: patched,
+        for (playerId, draft) in drafts {
+            var saved = draft
+            saved.playerId = playerId
+            if let idx = hole.entries.firstIndex(where: { $0.playerId == playerId }) {
+                saved.id = hole.entries[idx].id
+                hole.entries[idx] = saved
+            } else {
+                hole.entries.append(saved)
+            }
+        }
+        return OlympicsCalculator.scoreHole(
+            hole: hole,
             players: round.players,
             penaltiesEnabled: round.options.penaltiesEnabled,
             nearestPinCarryIn: OlympicsCalculator.carryIn(forHole: holeNumber, round: round),
             points: round.options.olympicsPoints,
             customRules: round.options.customPointRules
         )
-        guard let mine = result.perPlayer.first(where: { $0.playerId == draft.playerId }) else {
-            return (0, [], false)
-        }
-        return (mine.totalPoints, mine.lines, mine.reachApplied)
     }
 }

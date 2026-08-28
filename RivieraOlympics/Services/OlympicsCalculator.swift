@@ -163,8 +163,8 @@ enum OlympicsCalculator {
 
         let toPar = entry.strokes > 0 ? entry.strokes - hole.par : 0
 
-        if let medal = entry.medal {
-            preReach.append(PointLine(code: "medal", label: medal.label, points: points.medalPoints(medal)))
+        if let medal = entry.medal, medal == .diamond {
+            preReach.append(PointLine(code: "diamond", label: "ダイヤ", points: points.diamond))
         } else if entry.chipInFromOffGreen {
             preReach.append(PointLine(code: "diamond", label: "ダイヤ", points: points.diamond))
         }
@@ -172,9 +172,6 @@ enum OlympicsCalculator {
         if entry.declaredPin || entry.outerPinDeclared {
             let pts = entry.pinPointsOverride ?? points.pin
             preReach.append(PointLine(code: "pin", label: "竿", points: pts))
-            if entry.putts >= 3, penaltiesEnabled {
-                preReach.append(PointLine(code: "pin_3putt", label: "竿後3パット", points: points.pinThreePutt))
-            }
         }
 
         if entry.banker {
@@ -217,14 +214,20 @@ enum OlympicsCalculator {
         }
 
         if penaltiesEnabled {
-            let pinThreePutt = (entry.declaredPin || entry.outerPinDeclared) && entry.putts >= 3
-            if !pinThreePutt {
-                if entry.putts == 3 {
-                    preReach.append(PointLine(code: "3putt", label: "3パット", points: points.threePutt))
-                } else if entry.putts > 3 {
+            let pinFailed = entry.pinFailed
+                || ((entry.declaredPin || entry.outerPinDeclared) && entry.putts >= 3)
+            if pinFailed {
+                preReach.append(PointLine(code: "pin_fail", label: "竿失敗", points: points.pinThreePutt))
+            }
+
+            let threePuttMarked = entry.markedThreePutt || entry.putts >= 3
+            if !pinFailed, threePuttMarked {
+                if entry.putts > 3 {
                     let extra = entry.putts - 3
                     preReach.append(PointLine(code: "3putt", label: "3パット", points: points.threePutt))
                     preReach.append(PointLine(code: "over3putt", label: "オーバー3パット", points: points.overThreePuttPerExtra * extra))
+                } else {
+                    preReach.append(PointLine(code: "3putt", label: "3パット", points: points.threePutt))
                 }
             }
             if entry.nameLick {

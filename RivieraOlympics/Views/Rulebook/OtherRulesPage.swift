@@ -14,11 +14,18 @@ struct OtherRulesPage: View {
                 activePresetBanner
 
                 RuleSectionHeader(icon: "person.3.fill", title: "ホールマッチ", color: RivieraTheme.fairway)
-                RuleCard(title: "みんなでホール勝負", icon: "flag.checkered") {
+                RuleCard(title: "全員対抗（個人戦）", icon: "flag.checkered") {
                     RuleParagraph(text: "そのホールで、いちばん少ない打数の人が1人だけなら、その人がホールをもらいます。")
                     RuleBullet(text: "同じ打数が2人以上 → 引き分け（だれももらえない）", icon: "equal.circle.fill")
                     RuleBullet(text: "もらったホールごとに、ほかの人から掛け金をもらう", icon: "yensign.circle.fill")
-                    RuleTip(text: "例：4人・掛け金50 → 勝つと+150、ほかの人は一人ずつ−50")
+                    RuleTip(text: "例：4人・掛け金20 → 勝つと+60、ほかの人は一人ずつ−20")
+                }
+                RuleCard(title: "サイド対抗（1対3など）", icon: "person.2.fill", accent: .blue) {
+                    RuleParagraph(text: "サイドAとサイドBに分けます。人数は自由です（1対1、1対3、2対2）。")
+                    RuleParagraph(text: "各サイドの最少打数をくらべて、少ないほうがホール獲得。")
+                    RuleBullet(text: "1対3で1人が勝つ → +掛け金×3、3人は各自−掛け金", icon: "1.circle.fill")
+                    RuleBullet(text: "3人サイドが勝つ → 1人が−掛け金×3、3人は各自+掛け金", icon: "3.circle.fill")
+                    RuleTip(text: "スコア表のホールマッチ欄をタップすると、勝ち・引き分けを手動で直せます。")
                 }
 
                 RuleSectionHeader(icon: "dice.fill", title: "ラスベガス", color: .indigo)

@@ -24,15 +24,9 @@ struct OlympicsRulesPage: View {
                 }
 
                 RuleSectionHeader(icon: "crown.fill", title: "基本のメダル", color: .yellow)
-                RuleCard(title: "カップから遠い人から点", icon: "target", accent: .yellow) {
-                    RuleParagraph(text: "グリーンのまわりで、カップから遠いボールの人から順番にメダルがもらえます。")
-                    PointBadge(label: "ダイヤ（グリーン外から入れた）", points: signed(pts.diamond))
-                    PointBadge(label: "金（いちばん遠い）", points: signed(pts.gold))
-                    PointBadge(label: "銀", points: signed(pts.silver))
-                    PointBadge(label: "銅", points: signed(pts.bronze))
-                    PointBadge(label: "鉄（いちばん近い）", points: signed(pts.iron))
-                    Divider()
-                    RuleTip(text: "グリーンの外からボールを入れたら「ダイヤ」だよ！")
+                RuleCard(title: "ダイヤ（外チップ）", icon: "diamond.fill", accent: .yellow) {
+                    RuleParagraph(text: "グリーンの外からカップに入れたらダイヤです。金銀銅鉄の入力はありません。五輪点はスコア画面の ± で入れます。")
+                    PointBadge(label: "ダイヤ", points: signed(pts.diamond))
                 }
 
                 RuleSectionHeader(icon: "star.fill", title: "プラスの特別点", color: .blue)
@@ -40,7 +34,7 @@ struct OlympicsRulesPage: View {
                     RuleBullet(text: "「竿！」と宣言する", icon: "1.circle.fill")
                     RuleBullet(text: "カップまでピン1本分より遠い", icon: "2.circle.fill")
                     PointBadge(label: "成功", points: signed(pts.pin))
-                    PointBadge(label: "宣言したのに3パット", points: signed(pts.pinThreePutt), positive: pts.pinThreePutt >= 0)
+                    PointBadge(label: "竿失敗（宣言して入らず）", points: signed(pts.pinThreePutt), positive: pts.pinThreePutt >= 0)
                 }
                 RuleCard(title: "外竿", icon: "arrow.up.forward.circle.fill", accent: .blue) {
                     RuleParagraph(text: "グリーンの外から竿を宣言する特別ルールです。")
@@ -83,6 +77,7 @@ struct OlympicsRulesPage: View {
                 RuleSectionHeader(icon: "exclamationmark.triangle.fill", title: "マイナスの点", color: RivieraTheme.flag)
                 RuleCard(title: "気をつけよう", icon: "hand.raised.fill", accent: RivieraTheme.flag) {
                     PointBadge(label: "3パット", points: signed(pts.threePutt), positive: pts.threePutt >= 0)
+                    PointBadge(label: "竿失敗", points: signed(pts.pinThreePutt), positive: pts.pinThreePutt >= 0)
                     PointBadge(label: "4パット目から（1打ごと）", points: signed(pts.overThreePuttPerExtra), positive: pts.overThreePuttPerExtra >= 0)
                     PointBadge(label: "舐め（カップの淵で曲がった）", points: signed(pts.nameLick), positive: pts.nameLick >= 0)
                     PointBadge(label: "あわや（カラーに止まった）", points: signed(pts.awaya), positive: pts.awaya >= 0)

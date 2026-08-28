@@ -133,6 +133,33 @@ struct OptionsView: View {
                 enabled: !current.isSettled
             )
 
+            HoleMatchSettingsSection(
+                options: optionsBinding,
+                players: current.players.map { (id: $0.id, name: $0.name) },
+                enabled: !current.isSettled
+            )
+
+            OlympicsSettlementExclusionSection(
+                players: current.players.map { (id: $0.id, name: $0.name) },
+                options: optionsBinding,
+                enabled: !current.isSettled
+            )
+
+            Section {
+                PlayerOrderEditor(
+                    players: current.players.map { (id: $0.id, name: $0.name) },
+                    canEdit: !current.isSettled,
+                    onReorder: { ids in
+                        store.reorderRoundPlayers(roundId: roundId, orderedIds: ids)
+                    }
+                )
+            } header: {
+                Text("表示・入力順")
+            } footer: {
+                Text("スコアカード、打数入力、オリンピック点の並びです。矢印で入れ替えます。")
+            }
+            .environment(\.editMode, .constant(current.isSettled ? .inactive : .active))
+
             Section("ルールパラメータ") {
                 Text("既定セット: \(store.activeRulePreset.name)")
                     .font(.subheadline.weight(.semibold))
@@ -297,6 +324,9 @@ struct OptionsView: View {
                     var opts = newValue
                     if opts.lasVegasEnabled {
                         CompetitionGamesView.ensureLasVegasTeams(&opts, players: r.players)
+                    }
+                    if opts.holeMatchEnabled {
+                        HoleMatchCalculator.ensureSides(&opts, players: r.players)
                     }
                     r.options = opts
                 }

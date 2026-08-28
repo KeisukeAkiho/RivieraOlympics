@@ -583,7 +583,9 @@ struct SettlementExportCardView: View {
             ForEach(Array(summary.playerTotals.enumerated()), id: \.element.id) { index, t in
                 HStack(spacing: 0) {
                     settleCell(
-                        t.isSoncho ? "\(t.name)★" : t.name,
+                        t.isSoncho
+                            ? "\(t.name)★"
+                            : (t.olympicsSettlementExcluded ? "\(t.name)（除外）" : t.name),
                         width: 96,
                         bold: true,
                         bg: PlayerTheme.color(at: index).opacity(0.18)
@@ -591,7 +593,11 @@ struct SettlementExportCardView: View {
                     settleCell("\(t.grossScore)", width: 58)
                     if round.options.olympicsEnabled {
                         settleCell(olySignedText(t.olympicPoints), width: 58, fg: olyColor(t.olympicPoints))
-                        settleCell(yen(t.olympicYen), width: 72, fg: moneyColor(t.olympicYen))
+                        settleCell(
+                            t.olympicsSettlementExcluded ? "除外" : yen(t.olympicYen),
+                            width: 72,
+                            fg: t.olympicsSettlementExcluded ? .secondary : moneyColor(t.olympicYen)
+                        )
                     }
                     if round.options.holeMatchEnabled {
                         settleCell(yen(t.holeMatchYen), width: 66, fg: moneyColor(t.holeMatchYen))

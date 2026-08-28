@@ -153,41 +153,137 @@ enum LasVegasCalculator {
 }
 
 enum HoleMatchCalculator {
-    static func winnersByHole(round: GolfRound) -> [UUID?] {
+    struct HoleOutcome: Equatable {
+        var winnerIds: [UUID]
+        var isDraw: Bool
+        var isManual: Bool
+    }
+
+    static func outcomes(round: GolfRound) -> [HoleOutcome] {
         guard round.options.holeMatchEnabled else { return [] }
         return round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }).map { hole in
-            let scored = hole.entries.filter { $0.strokes > 0 }
-            guard let best = scored.map(\.strokes).min() else { return nil }
-            let winners = scored.filter { $0.strokes == best }
-            return winners.count == 1 ? winners[0].playerId : nil
+            outcome(for: hole, round: round)
         }
+    }
+
+    static func outcome(for hole: HoleRecord, round: GolfRound) -> HoleOutcome {
+        if hole.holeMatchManual {
+            if hole.holeMatchManualDraw {
+                return HoleOutcome(winnerIds: [], isDraw: true, isManual: true)
+            }
+            return HoleOutcome(
+                winnerIds: hole.holeMatchManualWinnerIds,
+                isDraw: hole.holeMatchManualWinnerIds.isEmpty,
+                isManual: true
+            )
+        }
+        return automaticOutcome(for: hole, round: round)
+    }
+
+    static func winnerIdsByHole(round: GolfRound) -> [[UUID]] {
+        outcomes(round: round).map(\.winnerIds)
+    }
+
+    /// Compatibility: single winner or nil (draw / team win / incomplete).
+    static func winnersByHole(round: GolfRound) -> [UUID?] {
+        winnerIdsByHole(round: round).map { ids in ids.count == 1 ? ids[0] : nil }
     }
 
     static func winsByPlayer(round: GolfRound) -> [UUID: Int] {
         var map: [UUID: Int] = [:]
-        for w in winnersByHole(round: round) {
-            guard let w else { continue }
-            map[w, default: 0] += 1
+        for outcome in outcomes(round: round) {
+            for id in Set(outcome.winnerIds) {
+                map[id, default: 0] += 1
+            }
         }
         return map
     }
 
     static func yenByPlayer(round: GolfRound) -> [UUID: Int] {
-        let winners = winnersByHole(round: round)
         let stake = round.options.stakeRate
         var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
-        let othersCount = max(0, round.players.count - 1)
-        for w in winners {
-            guard let winner = w else { continue }
-            for p in round.players {
-                if p.id == winner {
-                    map[p.id, default: 0] += stake * othersCount
-                } else {
-                    map[p.id, default: 0] -= stake
-                }
+        let participants = participatingIds(round: round)
+        guard !participants.isEmpty else { return map }
+
+        for outcome in outcomes(round: round) {
+            let winners = outcome.winnerIds.filter { participants.contains($0) }
+            let losers = participants.filter { !winners.contains($0) }
+            guard !winners.isEmpty, !losers.isEmpty, !outcome.isDraw else { continue }
+            let nW = winners.count
+            let nL = losers.count
+            for id in winners {
+                map[id, default: 0] += stake * nL
+            }
+            for id in losers {
+                map[id, default: 0] -= stake * nW
             }
         }
         return map
+    }
+
+    static func participatingIds(round: GolfRound) -> [UUID] {
+        switch round.options.holeMatchMode {
+        case .allPlayAll:
+            return round.players.map(\.id)
+        case .sides:
+            var seen = Set<UUID>()
+            var ids: [UUID] = []
+            for id in round.options.holeMatchSideA + round.options.holeMatchSideB {
+                if seen.insert(id).inserted, round.players.contains(where: { $0.id == id }) {
+                    ids.append(id)
+                }
+            }
+            return ids
+        }
+    }
+
+    static func ensureSides(_ options: inout RoundOptions, players: [Player]) {
+        guard options.holeMatchEnabled, options.holeMatchMode == .sides, !players.isEmpty else { return }
+        let valid = Set(players.map(\.id))
+        options.holeMatchSideA.removeAll { !valid.contains($0) }
+        options.holeMatchSideB.removeAll { !valid.contains($0) }
+        if options.holeMatchSideA.isEmpty && options.holeMatchSideB.isEmpty {
+            options.holeMatchSideA = [players[0].id]
+            options.holeMatchSideB = Array(players.dropFirst().map(\.id))
+        }
+        let a = Set(options.holeMatchSideA)
+        options.holeMatchSideB.removeAll { a.contains($0) }
+    }
+
+    private static func automaticOutcome(for hole: HoleRecord, round: GolfRound) -> HoleOutcome {
+        switch round.options.holeMatchMode {
+        case .allPlayAll:
+            let scored = hole.entries.filter { $0.strokes > 0 }
+            guard let best = scored.map(\.strokes).min() else {
+                return HoleOutcome(winnerIds: [], isDraw: false, isManual: false)
+            }
+            let winners = scored.filter { $0.strokes == best }.map(\.playerId)
+            if winners.count == 1 {
+                return HoleOutcome(winnerIds: winners, isDraw: false, isManual: false)
+            }
+            return HoleOutcome(winnerIds: [], isDraw: !winners.isEmpty, isManual: false)
+
+        case .sides:
+            let a = round.options.holeMatchSideA
+            let b = round.options.holeMatchSideB
+            guard !a.isEmpty, !b.isEmpty else {
+                return HoleOutcome(winnerIds: [], isDraw: false, isManual: false)
+            }
+            func best(of ids: [UUID]) -> Int? {
+                let strokes = hole.entries.filter { ids.contains($0.playerId) && $0.strokes > 0 }.map(\.strokes)
+                return strokes.min()
+            }
+            guard let bestA = best(of: a), let bestB = best(of: b) else {
+                return HoleOutcome(winnerIds: [], isDraw: false, isManual: false)
+            }
+            if bestA < bestB {
+                return HoleOutcome(winnerIds: a, isDraw: false, isManual: false)
+            }
+            if bestB < bestA {
+                return HoleOutcome(winnerIds: b, isDraw: false, isManual: false)
+            }
+            return HoleOutcome(winnerIds: [], isDraw: true, isManual: false)
+        }
     }
 }
 
@@ -381,13 +477,26 @@ enum SettlementEngine {
             notes.append("村長: \(names)")
         }
 
-        let n = max(1, round.players.count)
-        let sumOlympic = olympicTotals.values.reduce(0, +)
+        let excluded = Set(round.options.olympicsExcludedPlayerIds)
+        let participants = round.players.filter { !excluded.contains($0.id) }
+        if round.options.olympicsEnabled, !excluded.isEmpty {
+            let names = round.players.filter { excluded.contains($0.id) }.map(\.name).joined(separator: ", ")
+            notes.append("オリンピック精算から除外: \(names)")
+        }
+
+        let n = participants.count
+        let sumOlympic = participants.reduce(0) { $0 + olympicTotals[$1.id, default: 0] }
 
         let totals: [PlayerTotals] = round.players.map { player in
             let op = olympicTotals[player.id, default: 0]
-            // 検算: (自分点×人数) − 全員合計 → 合計すると必ず0
-            let olympicUnits = round.options.olympicsEnabled ? (op * n - sumOlympic) : 0
+            let excludedFromOlympics = excluded.contains(player.id)
+            let olympicUnits: Int
+            if !round.options.olympicsEnabled || excludedFromOlympics || n == 0 {
+                olympicUnits = 0
+            } else {
+                // 検算: (自分点×精算人数) − 精算対象の合計 → 対象者だけで合計0
+                olympicUnits = op * n - sumOlympic
+            }
             let olympicYen = olympicUnits * stake
             let holeYen = hm[player.id, default: 0]
             let lvYen = lv[player.id, default: 0]
@@ -423,7 +532,8 @@ enum SettlementEngine {
                 honestJohnPoints: hjPoints,
                 honestJohnYen: honestYen,
                 isSoncho: sonchoWinners.contains(player.id),
-                netYen: net
+                netYen: net,
+                olympicsSettlementExcluded: excludedFromOlympics && round.options.olympicsEnabled
             )
         }.sorted { $0.netYen > $1.netYen }
 

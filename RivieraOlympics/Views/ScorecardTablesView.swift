@@ -5,12 +5,9 @@ struct ScorecardTablesView: View {
     @EnvironmentObject private var store: RoundStore
     let roundId: UUID
 
-    @State private var olympicsPresented = false
-    @State private var olympicsHole = 1
-    @State private var olympicsPlayerId = UUID()
-    @State private var draftEntry: PlayerHoleEntry = PlayerHoleEntry(playerId: UUID())
     @State private var scoreHoleTarget: ScoreHoleTarget?
-    @State private var scoreDraft: [UUID: Int] = [:]
+    @State private var scoreDraft: [UUID: PlayerHoleEntry] = [:]
+    @State private var holeMatchEditHole: Int?
 
     private let nameWidth: CGFloat = 52
     private let cellWidth: CGFloat = 44
@@ -46,12 +43,12 @@ struct ScorecardTablesView: View {
                                     scoreBlock(round: round)
 
                                     if round.options.olympicsEnabled {
-                                        sectionDivider(title: "オリンピック点数（セルをタップしてアイコン入力）")
+                                        sectionDivider(title: "オリンピック点数（スコア入力で ± ／履歴）")
                                         olympicsBlock(round: round)
                                     }
 
                                     if round.options.holeMatchEnabled {
-                                        sectionDivider(title: "ホールマッチ（勝ちホール）")
+                                        sectionDivider(title: holeMatchSectionTitle(round))
                                         holeMatchBlock(round: round)
                                     }
 
@@ -79,27 +76,37 @@ struct ScorecardTablesView: View {
                         }
                     }
                 }
-                .sheet(isPresented: $olympicsPresented) {
-                    olympicsEditorSheet(round: currentRound ?? round)
-                        .environmentObject(store)
-                }
                 .sheet(item: $scoreHoleTarget) { target in
                     let live = currentRound ?? round
                     CompactScoreEditor(
-                        strokesByPlayer: $scoreDraft,
+                        entriesByPlayer: $scoreDraft,
                         players: live.players,
                         holeNumber: target.holeNumber,
                         par: par(for: target.holeNumber),
                         yards: live.yards(forHole: target.holeNumber),
                         teeName: live.selectedTeeName,
+                        round: live,
                         onCommit: {
-                            commitScores(hole: target.holeNumber, strokesByPlayer: scoreDraft)
+                            commitHoleEntries(hole: target.holeNumber, entriesByPlayer: scoreDraft)
                             scoreHoleTarget = nil
                         },
                         onCancel: { scoreHoleTarget = nil }
                     )
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.large, .medium])
                     .presentationDragIndicator(.visible)
+                }
+                .confirmationDialog(
+                    holeMatchDialogTitle,
+                    isPresented: Binding(
+                        get: { holeMatchEditHole != nil },
+                        set: { if !$0 { holeMatchEditHole = nil } }
+                    ),
+                    titleVisibility: .visible
+                ) {
+                    holeMatchDialogButtons
+                    Button("キャンセル", role: .cancel) { holeMatchEditHole = nil }
+                } message: {
+                    Text("自動はスコアから判定。手動にすると打数が変わってもこのホールの勝ちは固定されます。")
                 }
             } else {
                 ContentUnavailableView("ラウンドが見つかりません", systemImage: "flag.slash")
@@ -109,37 +116,6 @@ struct ScorecardTablesView: View {
 
     private var currentRound: GolfRound? {
         store.rounds.first(where: { $0.id == roundId })
-    }
-
-    private var olympicsFocusPlayerId: UUID? {
-        olympicsPresented ? olympicsPlayerId : nil
-    }
-
-    @ViewBuilder
-    private func olympicsEditorSheet(round: GolfRound) -> some View {
-        let idx = round.players.firstIndex(where: { $0.id == olympicsPlayerId }) ?? 0
-        CompactOlympicsEditor(
-            entry: $draftEntry,
-            round: round,
-            par: par(for: olympicsHole),
-            playerName: playerName(olympicsPlayerId),
-            holeNumber: olympicsHole,
-            playerIndex: idx,
-            playerCount: round.players.count,
-            nearestPinCarryIn: OlympicsCalculator.carryIn(forHole: olympicsHole, round: round),
-            onCommit: {
-                commitOlympics(
-                    target: EditTarget(playerId: olympicsPlayerId, holeNumber: olympicsHole),
-                    entry: draftEntry
-                )
-                olympicsPresented = false
-            },
-            onCancel: { olympicsPresented = false },
-            onGoPrevious: { switchOlympicsPlayer(delta: -1) },
-            onGoNext: { switchOlympicsPlayer(delta: 1) }
-        )
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
     }
 
     // MARK: - Compact warnings (reach / yakitori)
@@ -222,18 +198,17 @@ struct ScorecardTablesView: View {
                 title: "選手",
                 tint: RivieraTheme.fairway.opacity(0.15),
                 round: round,
-                olympicsFocus: false,
                 includeParsRow: true,
                 includeYardsRow: round.hasHoleYards
             )
 
             if round.options.olympicsEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
-                stickyPlayerSection(title: "選手", tint: Color.orange.opacity(0.15), round: round, olympicsFocus: true)
+                stickyPlayerSection(title: "選手", tint: Color.orange.opacity(0.15), round: round)
             }
             if round.options.holeMatchEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
-                stickyPlayerSection(title: "HM", tint: Color.blue.opacity(0.12), round: round, olympicsFocus: false)
+                stickyPlayerSection(title: "HM", tint: Color.blue.opacity(0.12), round: round)
             }
             if round.options.lasVegasEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
@@ -246,22 +221,21 @@ struct ScorecardTablesView: View {
                     title: "LV",
                     tint: Color.indigo.opacity(0.08),
                     round: round,
-                    olympicsFocus: false,
                     skipHeader: true,
                     rowHeight: lvPlayerRowHeight
                 )
             }
             if round.options.snakeEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
-                stickyPlayerSection(title: "蛇", tint: Color.purple.opacity(0.12), round: round, olympicsFocus: false)
+                stickyPlayerSection(title: "蛇", tint: Color.purple.opacity(0.12), round: round)
             }
             if round.options.sonchoEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
-                stickyPlayerSection(title: "村長", tint: RivieraTheme.sand.opacity(0.35), round: round, olympicsFocus: false)
+                stickyPlayerSection(title: "村長", tint: RivieraTheme.sand.opacity(0.35), round: round)
             }
             if round.options.honestJohnEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
-                stickyPlayerSection(title: "OJ", tint: Color.teal.opacity(0.12), round: round, olympicsFocus: false)
+                stickyPlayerSection(title: "OJ", tint: Color.teal.opacity(0.12), round: round)
             }
         }
         .background(Color(.secondarySystemBackground))
@@ -274,7 +248,6 @@ struct ScorecardTablesView: View {
         title: String,
         tint: Color,
         round: GolfRound,
-        olympicsFocus: Bool,
         skipHeader: Bool = false,
         rowHeight: CGFloat? = nil,
         includeParsRow: Bool = false,
@@ -296,18 +269,17 @@ struct ScorecardTablesView: View {
                     .background(RivieraTheme.fairway.opacity(0.10))
             }
             ForEach(Array(round.players.enumerated()), id: \.element.id) { index, p in
-                let focused = olympicsFocus && olympicsFocusPlayerId == p.id
                 let theme = PlayerTheme.color(at: index)
-                Text(focused ? "▶\(p.name)" : p.name)
+                Text(p.name)
                     .font(.system(size: 10, weight: .bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.45)
                     .frame(width: nameWidth, height: h)
                     .overlay(Rectangle().stroke(theme.opacity(0.45), lineWidth: 0.5))
-                    .background(PlayerTheme.rowFill(at: index, focused: focused))
+                    .background(PlayerTheme.rowFill(at: index, focused: false))
                     .overlay(
                         RoundedRectangle(cornerRadius: 0)
-                            .stroke(focused ? theme : .clear, lineWidth: 2)
+                            .stroke(.clear, lineWidth: 2)
                     )
             }
         }
@@ -368,11 +340,14 @@ struct ScorecardTablesView: View {
 
     private func openScoreEditor(round: GolfRound, hole: Int) {
         let par = round.holes.first(where: { $0.holeNumber == hole })?.par ?? 4
-        var draft: [UUID: Int] = [:]
+        var draft: [UUID: PlayerHoleEntry] = [:]
         for p in round.players {
-            let current = strokes(round: round, playerId: p.id, hole: hole)
-            // 未入力はパーを起点に矢印調整できるよう下書きへ載せる
-            draft[p.id] = current > 0 ? current : par
+            var e = entry(round: round, playerId: p.id, hole: hole) ?? PlayerHoleEntry(playerId: p.id)
+            e.playerId = p.id
+            if e.strokes == 0 {
+                e.strokes = par
+            }
+            draft[p.id] = e
         }
         scoreDraft = draft
         scoreHoleTarget = ScoreHoleTarget(holeNumber: hole)
@@ -398,23 +373,22 @@ struct ScorecardTablesView: View {
                 totalTint: Color.orange.opacity(0.28)
             )
             ForEach(round.players) { p in
-                let rowFocused = olympicsFocusPlayerId == p.id
                 HStack(spacing: 0) {
                     ForEach(1...9, id: \.self) { h in
-                        olympicsHoleButton(round: round, playerId: p.id, hole: h, map: map, rowFocused: rowFocused)
+                        olympicsHoleButton(round: round, playerId: p.id, hole: h, map: map)
                     }
                     let out = pointsSum(map: map, playerId: p.id, holes: 1...9)
                     cellText(out == 0 ? "—" : "\(out)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.orange.opacity(0.18) : Color.orange.opacity(0.10))
+                        .background(Color.orange.opacity(0.10))
                     ForEach(10...18, id: \.self) { h in
-                        olympicsHoleButton(round: round, playerId: p.id, hole: h, map: map, rowFocused: rowFocused)
+                        olympicsHoleButton(round: round, playerId: p.id, hole: h, map: map)
                     }
                     let inn = pointsSum(map: map, playerId: p.id, holes: 10...18)
                     cellText(inn == 0 ? "—" : "\(inn)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.orange.opacity(0.18) : Color.orange.opacity(0.10))
+                        .background(Color.orange.opacity(0.10))
                     let tot = out + inn
                     cellText(tot == 0 ? "—" : "\(tot)", bold: true, width: cellWidth, height: cellHeight)
-                        .background(rowFocused ? Color.orange.opacity(0.22) : Color(.tertiarySystemFill))
+                        .background(Color(.tertiarySystemFill))
                 }
             }
         }
@@ -424,20 +398,15 @@ struct ScorecardTablesView: View {
         round: GolfRound,
         playerId: UUID,
         hole: Int,
-        map: [Int: [UUID: Int]],
-        rowFocused: Bool
+        map: [Int: [UUID: Int]]
     ) -> some View {
         let pts = map[hole]?[playerId] ?? 0
         let holeEntry = entry(round: round, playerId: playerId, hole: hole)
-        let cellFocused = olympicsFocusPlayerId == playerId && olympicsPresented && olympicsHole == hole
         return Button {
             guard !round.isSettled else { return }
-            draftEntry = olympicsDraft(from: holeEntry, playerId: playerId)
-            olympicsPlayerId = playerId
-            olympicsHole = hole
-            olympicsPresented = true
+            openScoreEditor(round: round, hole: hole)
         } label: {
-            olympicsCellLabel(entry: holeEntry, points: pts, focused: cellFocused, rowFocused: rowFocused)
+            olympicsCellLabel(entry: holeEntry, points: pts, focused: false, rowFocused: false)
         }
         .buttonStyle(.plain)
         .disabled(round.isSettled)
@@ -567,6 +536,8 @@ struct ScorecardTablesView: View {
             || e.banker
             || e.nameLick
             || e.awaya
+            || e.markedThreePutt
+            || e.pinFailed
             || e.parOn
             || e.birdieOn
             || e.nearestPinContender
@@ -578,6 +549,7 @@ struct ScorecardTablesView: View {
             || e.bankerPointsOverride != nil
             || e.parOnPointsOverride != nil
             || e.birdieOnPointsOverride != nil
+            || !e.eventLog.isEmpty
             || e.putts >= 3
     }
 
@@ -587,6 +559,8 @@ struct ScorecardTablesView: View {
         if e.medal != nil || e.chipInFromOffGreen { icons.append("medal.fill") }
         if e.declaredReach { icons.append("bolt.fill") }
         if e.declaredPin || e.outerPinDeclared { icons.append("ruler") }
+        if e.pinFailed { icons.append("xmark.circle") }
+        if e.markedThreePutt || e.putts >= 3 { icons.append("3.circle") }
         if e.banker { icons.append("beach.umbrella.fill") }
         if e.nameLick { icons.append("drop.fill") }
         if e.awaya { icons.append("leaf.fill") }
@@ -597,8 +571,65 @@ struct ScorecardTablesView: View {
 
     // MARK: - Side games
 
+    private func holeMatchSectionTitle(_ round: GolfRound) -> String {
+        switch round.options.holeMatchMode {
+        case .allPlayAll:
+            return "ホールマッチ（全員対抗・タップで手動）"
+        case .sides:
+            let a = round.options.holeMatchSideA.count
+            let b = round.options.holeMatchSideB.count
+            return "ホールマッチ（\(a)対\(b)・タップで手動）"
+        }
+    }
+
+    private var holeMatchDialogTitle: String {
+        if let h = holeMatchEditHole {
+            return "ホール \(h) の勝ち"
+        }
+        return "ホールマッチ"
+    }
+
+    @ViewBuilder
+    private var holeMatchDialogButtons: some View {
+        if let hole = holeMatchEditHole, let round = currentRound {
+            Button("自動（スコア）") {
+                setHoleMatch(hole: hole, manual: false, draw: false, winners: [])
+            }
+            Button("引き分け") {
+                setHoleMatch(hole: hole, manual: true, draw: true, winners: [])
+            }
+            if round.options.holeMatchMode == .sides {
+                let aNames = round.players.filter { round.options.holeMatchSideA.contains($0.id) }.map(\.name).joined(separator: "・")
+                let bNames = round.players.filter { round.options.holeMatchSideB.contains($0.id) }.map(\.name).joined(separator: "・")
+                Button("サイドAの勝ち（\(aNames)）") {
+                    setHoleMatch(hole: hole, manual: true, draw: false, winners: round.options.holeMatchSideA)
+                }
+                Button("サイドBの勝ち（\(bNames)）") {
+                    setHoleMatch(hole: hole, manual: true, draw: false, winners: round.options.holeMatchSideB)
+                }
+            }
+            ForEach(round.players) { p in
+                Button("\(p.name) の勝ち") {
+                    let winners: [UUID]
+                    if round.options.holeMatchMode == .sides {
+                        if round.options.holeMatchSideA.contains(p.id) {
+                            winners = round.options.holeMatchSideA
+                        } else if round.options.holeMatchSideB.contains(p.id) {
+                            winners = round.options.holeMatchSideB
+                        } else {
+                            winners = [p.id]
+                        }
+                    } else {
+                        winners = [p.id]
+                    }
+                    setHoleMatch(hole: hole, manual: true, draw: false, winners: winners)
+                }
+            }
+        }
+    }
+
     private func holeMatchBlock(round: GolfRound) -> some View {
-        let winners = HoleMatchCalculator.winnersByHole(round: round)
+        let outcomes = HoleMatchCalculator.outcomes(round: round)
         let yen = HoleMatchCalculator.yenByPlayer(round: round)
         let nineTint = Color.blue.opacity(0.18)
         return VStack(spacing: 0) {
@@ -610,15 +641,15 @@ struct ScorecardTablesView: View {
             ForEach(round.players) { p in
                 HStack(spacing: 0) {
                     ForEach(1...9, id: \.self) { h in
-                        holeMatchMarkCell(winners: winners, playerId: p.id, hole: h)
+                        holeMatchMarkCell(outcomes: outcomes, playerId: p.id, hole: h, round: round)
                     }
-                    let outW = winCount(winners: winners, playerId: p.id, holes: 1...9)
+                    let outW = winCount(outcomes: outcomes, playerId: p.id, holes: 1...9)
                     cellText(outW > 0 ? "\(outW)" : "—", bold: true, width: cellWidth, height: cellHeight)
                         .background(nineTint.opacity(0.55))
                     ForEach(10...18, id: \.self) { h in
-                        holeMatchMarkCell(winners: winners, playerId: p.id, hole: h)
+                        holeMatchMarkCell(outcomes: outcomes, playerId: p.id, hole: h, round: round)
                     }
-                    let inW = winCount(winners: winners, playerId: p.id, holes: 10...18)
+                    let inW = winCount(outcomes: outcomes, playerId: p.id, holes: 10...18)
                     cellText(inW > 0 ? "\(inW)" : "—", bold: true, width: cellWidth, height: cellHeight)
                         .background(nineTint.opacity(0.55))
                     let tot = outW + inW
@@ -630,22 +661,53 @@ struct ScorecardTablesView: View {
         }
     }
 
-    private func holeMatchMarkCell(winners: [UUID?], playerId: UUID, hole: Int) -> some View {
-        let w = (hole - 1 < winners.count) ? winners[hole - 1] : nil
+    private func holeMatchMarkCell(
+        outcomes: [HoleMatchCalculator.HoleOutcome],
+        playerId: UUID,
+        hole: Int,
+        round: GolfRound
+    ) -> some View {
+        let outcome = (hole - 1 < outcomes.count) ? outcomes[hole - 1] : nil
+        let won = outcome?.winnerIds.contains(playerId) == true
+        let draw = outcome?.isDraw == true
+        let manual = outcome?.isManual == true
         let mark: String = {
-            guard let w else { return "·" }
-            return w == playerId ? "W" : "·"
+            if won { return "W" }
+            if draw { return "=" }
+            return "·"
         }()
-        return cellText(mark, bold: mark == "W", width: cellWidth, height: cellHeight)
-            .foregroundStyle(mark == "W" ? RivieraTheme.fairway : .secondary)
+        return Button {
+            guard !round.isSettled else { return }
+            holeMatchEditHole = hole
+        } label: {
+            cellText(mark, bold: won || draw, width: cellWidth, height: cellHeight)
+                .foregroundStyle(won ? RivieraTheme.fairway : (draw ? Color.orange : .secondary))
+                .background(manual ? Color.blue.opacity(0.12) : Color.clear)
+        }
+        .buttonStyle(.plain)
+        .disabled(round.isSettled)
     }
 
-    private func winCount(winners: [UUID?], playerId: UUID, holes: ClosedRange<Int>) -> Int {
+    private func winCount(
+        outcomes: [HoleMatchCalculator.HoleOutcome],
+        playerId: UUID,
+        holes: ClosedRange<Int>
+    ) -> Int {
         holes.reduce(0) { sum, h in
             let idx = h - 1
-            guard idx < winners.count, winners[idx] == playerId else { return sum }
+            guard idx < outcomes.count, outcomes[idx].winnerIds.contains(playerId) else { return sum }
             return sum + 1
         }
+    }
+
+    private func setHoleMatch(hole: Int, manual: Bool, draw: Bool, winners: [UUID]) {
+        guard var r = store.rounds.first(where: { $0.id == roundId }), !r.isSettled,
+              let hi = r.holes.firstIndex(where: { $0.holeNumber == hole }) else { return }
+        r.holes[hi].holeMatchManual = manual
+        r.holes[hi].holeMatchManualDraw = draw
+        r.holes[hi].holeMatchManualWinnerIds = draw || !manual ? [] : winners
+        store.updateRound(r)
+        holeMatchEditHole = nil
     }
 
     private func lasVegasBlock(round: GolfRound) -> some View {
@@ -970,62 +1032,38 @@ struct ScorecardTablesView: View {
 
     // MARK: - Mutations
 
-    private func setStrokes(playerId: UUID, hole: Int, strokes: Int) {
-        guard var r = store.rounds.first(where: { $0.id == roundId }), !r.isSettled,
-              let hi = r.holes.firstIndex(where: { $0.holeNumber == hole }),
-              let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == playerId }) else { return }
-        r.holes[hi].entries[ei].strokes = strokes
-        if strokes == 0 {
-            r.holes[hi].entries[ei].putts = 0
-        }
-        // パット数はオリンピック加点に使わない。蛇・3パット減点・リーチ成否用に明示入力する
-        store.updateRound(r)
-        recomputeCarry()
-    }
-
-    private func commitScores(hole: Int, strokesByPlayer: [UUID: Int]) {
+    private func commitHoleEntries(hole: Int, entriesByPlayer: [UUID: PlayerHoleEntry]) {
         guard var r = store.rounds.first(where: { $0.id == roundId }), !r.isSettled,
               let hi = r.holes.firstIndex(where: { $0.holeNumber == hole }) else { return }
-        for (playerId, strokes) in strokesByPlayer {
-            guard let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == playerId }) else { continue }
-            r.holes[hi].entries[ei].strokes = strokes
-            if strokes == 0 {
-                r.holes[hi].entries[ei].putts = 0
+
+        let exclusiveMedals: Set<OlympicMedal> = [.gold, .silver, .bronze, .iron]
+        var claimedMedals = Set<OlympicMedal>()
+        var claimedNearestPin = false
+        for player in r.players {
+            guard var saved = entriesByPlayer[player.id] else { continue }
+            saved.playerId = player.id
+            if let m = saved.medal, exclusiveMedals.contains(m) {
+                if claimedMedals.contains(m) {
+                    saved.medal = nil
+                } else {
+                    claimedMedals.insert(m)
+                }
             }
-            // パット既定値は入れない（オリンピック点に誤って乗るのを防ぐ）
-        }
-        store.updateRound(r)
-        recomputeCarry()
-    }
-
-    private func commitOlympics(target: EditTarget, entry: PlayerHoleEntry) {
-        guard var r = store.rounds.first(where: { $0.id == roundId }), !r.isSettled,
-              let hi = r.holes.firstIndex(where: { $0.holeNumber == target.holeNumber }) else { return }
-
-        var saved = entry
-        saved.playerId = target.playerId
-
-        // 金銀銅鉄はホール内で重複させない（UI無効化の保険）
-        if let m = saved.medal, [.gold, .silver, .bronze, .iron].contains(m),
-           r.holes[hi].entries.contains(where: { $0.playerId != saved.playerId && $0.medal == m }) {
-            saved.medal = nil
-        }
-
-        if let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == target.playerId }) {
-            // Keep original entry id for Equatable/Codable stability
-            saved.id = r.holes[hi].entries[ei].id
-            r.holes[hi].entries[ei] = saved
-        } else {
-            r.holes[hi].entries.append(saved)
-        }
-
-        if saved.nearestPinContender {
-            for i in r.holes[hi].entries.indices where r.holes[hi].entries[i].playerId != saved.playerId {
-                r.holes[hi].entries[i].nearestPinContender = false
+            if saved.nearestPinContender {
+                if claimedNearestPin {
+                    saved.nearestPinContender = false
+                } else {
+                    claimedNearestPin = true
+                }
+            }
+            if let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == player.id }) {
+                saved.id = r.holes[hi].entries[ei].id
+                r.holes[hi].entries[ei] = saved
+            } else {
+                r.holes[hi].entries.append(saved)
             }
         }
 
-        // Carry 再計算を同じラウンド値にマージして一回だけ保存（反映漏れ防止）
         var carry = 0
         for i in r.holes.indices.sorted(by: { r.holes[$0].holeNumber < r.holes[$1].holeNumber }) {
             r.holes[i].nearestPinCarryIn = carry
@@ -1040,37 +1078,6 @@ struct ScorecardTablesView: View {
             carry = scored.nearestPinCarryOut
         }
         store.updateRound(r)
-    }
-
-    private func switchOlympicsPlayer(delta: Int) {
-        guard olympicsPresented,
-              let r = store.rounds.first(where: { $0.id == roundId }),
-              let idx = r.players.firstIndex(where: { $0.id == olympicsPlayerId }) else { return }
-        let nextIdx = idx + delta
-        guard r.players.indices.contains(nextIdx) else { return }
-
-        commitOlympics(
-            target: EditTarget(playerId: olympicsPlayerId, holeNumber: olympicsHole),
-            entry: draftEntry
-        )
-
-        let nextPlayer = r.players[nextIdx]
-        let refreshed = store.rounds.first(where: { $0.id == roundId }) ?? r
-        draftEntry = olympicsDraft(
-            from: entry(round: refreshed, playerId: nextPlayer.id, hole: olympicsHole),
-            playerId: nextPlayer.id
-        )
-        olympicsPlayerId = nextPlayer.id
-    }
-
-    /// オリンピック入力下書き。パット未入力(0)はデフォルト2。
-    private func olympicsDraft(from existing: PlayerHoleEntry?, playerId: UUID) -> PlayerHoleEntry {
-        var e = existing ?? PlayerHoleEntry(playerId: playerId)
-        e.playerId = playerId
-        if e.putts == 0 {
-            e.putts = 2
-        }
-        return e
     }
 
     private func entry(round: GolfRound, playerId: UUID, hole: Int) -> PlayerHoleEntry? {
@@ -1086,34 +1093,6 @@ struct ScorecardTablesView: View {
         store.rounds.first(where: { $0.id == roundId })?
             .holes.first(where: { $0.holeNumber == hole })?.par ?? 4
     }
-
-    private func playerName(_ id: UUID) -> String {
-        store.rounds.first(where: { $0.id == roundId })?
-            .players.first(where: { $0.id == id })?.name ?? "選手"
-    }
-
-    private func recomputeCarry() {
-        guard var r = store.rounds.first(where: { $0.id == roundId }) else { return }
-        var carry = 0
-        for i in r.holes.indices.sorted(by: { r.holes[$0].holeNumber < r.holes[$1].holeNumber }) {
-            r.holes[i].nearestPinCarryIn = carry
-            let scored = OlympicsCalculator.scoreHole(
-                hole: r.holes[i],
-                players: r.players,
-                penaltiesEnabled: r.options.penaltiesEnabled,
-                nearestPinCarryIn: carry,
-                points: r.options.olympicsPoints,
-                customRules: r.options.customPointRules
-            )
-            carry = scored.nearestPinCarryOut
-        }
-        store.updateRound(r)
-    }
-}
-
-private struct EditTarget {
-    var playerId: UUID
-    let holeNumber: Int
 }
 
 private struct ScoreHoleTarget: Identifiable {

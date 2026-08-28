@@ -35,6 +35,12 @@ struct CompetitionGamesView: View {
                 showFooter: true
             )
 
+            HoleMatchSettingsSection(
+                options: optionsBinding,
+                players: current.players.map { (id: $0.id, name: $0.name) },
+                enabled: !current.isSettled
+            )
+
             if current.isSettled {
                 Section {
                     Text("精算確定後は競技内容を変更できません。解除する場合は精算画面から行ってください。")
@@ -79,6 +85,9 @@ struct CompetitionGamesView: View {
                     var opts = newValue
                     if opts.lasVegasEnabled {
                         Self.ensureLasVegasTeams(&opts, players: r.players)
+                    }
+                    if opts.holeMatchEnabled {
+                        HoleMatchCalculator.ensureSides(&opts, players: r.players)
                     }
                     r.options = opts
                 }

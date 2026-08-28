@@ -40,19 +40,36 @@ struct SettlementView: View {
                     }
 
                     Section("オリンピック精算（掛け金 \(r.options.stakeRate)）") {
-                        Text("計算: (自分の点 × 人数) − 全員の合計点 × 掛け金")
+                        let participantCount = r.players.filter { !r.options.isExcludedFromOlympicsSettlement($0.id) }.count
+                        Text("計算: (自分の点 × 精算人数 \(participantCount)) − 精算対象の合計点 × 掛け金")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         ForEach(summary.playerTotals) { t in
                             VStack(alignment: .leading, spacing: 4) {
                                 HStack {
                                     Text(t.name).font(.headline)
+                                    if t.olympicsSettlementExcluded {
+                                        Text("精算除外")
+                                            .font(.caption2.weight(.bold))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.secondary.opacity(0.18))
+                                            .clipShape(Capsule())
+                                    }
                                     Spacer()
-                                    Text(yen(t.olympicYen))
+                                    Text(t.olympicsSettlementExcluded ? "—" : yen(t.olympicYen))
                                         .font(.title3.monospacedDigit().weight(.bold))
-                                        .foregroundStyle(t.olympicYen >= 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                                        .foregroundStyle(
+                                            t.olympicsSettlementExcluded
+                                                ? Color.secondary
+                                                : (t.olympicYen >= 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                                        )
                                 }
-                                Text("点 \(t.olympicPoints) · 検算単位 \(t.olympicUnits)")
+                                Text(
+                                    t.olympicsSettlementExcluded
+                                        ? "点 \(t.olympicPoints) · 精算計算には含めません"
+                                        : "点 \(t.olympicPoints) · 検算単位 \(t.olympicUnits)"
+                                )
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -79,6 +96,14 @@ struct SettlementView: View {
                                             .background(RivieraTheme.sand)
                                             .clipShape(Capsule())
                                     }
+                                    if t.olympicsSettlementExcluded {
+                                        Text("五輪除外")
+                                            .font(.caption2.weight(.bold))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(Color.secondary.opacity(0.18))
+                                            .clipShape(Capsule())
+                                    }
                                     Spacer()
                                     Text(yen(t.netYen))
                                         .font(.title3.monospacedDigit().weight(.bold))
@@ -90,7 +115,11 @@ struct SettlementView: View {
                                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 4) {
                                     GridRow {
                                         Text("オリンピック").foregroundStyle(.secondary)
-                                        Text("\(t.olympicPoints)点 → \(yen(t.olympicYen))")
+                                        Text(
+                                            t.olympicsSettlementExcluded
+                                                ? "\(t.olympicPoints)点 → 精算除外"
+                                                : "\(t.olympicPoints)点 → \(yen(t.olympicYen))"
+                                        )
                                     }
                                     GridRow {
                                         Text("ホールマッチ").foregroundStyle(.secondary)

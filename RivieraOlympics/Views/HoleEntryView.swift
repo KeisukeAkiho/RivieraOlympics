@@ -5,7 +5,8 @@ struct HoleEntryView: View {
     let roundId: UUID
     let holeNumber: Int
 
-    @State private var selectedPlayerId: UUID?
+    @State private var showEditor = false
+    @State private var scoreDraft: [UUID: PlayerHoleEntry] = [:]
 
     private var roundIndex: Int? {
         store.rounds.firstIndex(where: { $0.id == roundId })
@@ -29,7 +30,7 @@ struct HoleEntryView: View {
                             Text("距離 \(y) yd\(tee)")
                                 .font(.subheadline.weight(.semibold).monospacedDigit())
                         }
-                        Text("選手をタップして打数・オリンピック・リーチ・舐め・あわやなどを入力します。")
+                        Text("打数とオリンピック点を同じ画面で ± 入力します。リーチなどは履歴ボタンで残します。")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     } header: {
@@ -37,14 +38,15 @@ struct HoleEntryView: View {
                     }
 
                     Section("スコア") {
-                        ForEach(hole.entries) { entry in
-                            let name = round.players.first(where: { $0.id == entry.playerId })?.name ?? "?"
+                        ForEach(round.players) { player in
+                            let entry = hole.entries.first(where: { $0.playerId == player.id })
+                                ?? PlayerHoleEntry(playerId: player.id)
                             Button {
-                                selectedPlayerId = entry.playerId
+                                openEditor(round: round, hole: hole)
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(name).foregroundStyle(.primary)
+                                        Text(player.name).foregroundStyle(.primary)
                                         Text(summary(entry))
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
@@ -68,12 +70,12 @@ struct HoleEntryView: View {
                                 points: round.options.olympicsPoints,
                                 customRules: round.options.customPointRules
                             )
-                            ForEach(result.perPlayer, id: \.playerId) { p in
-                                let name = round.players.first(where: { $0.id == p.playerId })?.name ?? "?"
+                            ForEach(round.players) { player in
+                                let pts = result.perPlayer.first(where: { $0.playerId == player.id })?.totalPoints ?? 0
                                 HStack {
-                                    Text(name)
+                                    Text(player.name)
                                     Spacer()
-                                    Text("\(p.totalPoints) 点")
+                                    Text("\(pts) 点")
                                         .fontWeight(.semibold)
                                 }
                             }
@@ -81,26 +83,30 @@ struct HoleEntryView: View {
                     }
                 }
                 .navigationTitle("ホール \(holeNumber)")
-                .sheet(item: selectedEntryBinding(ri: ri, hi: hi)) { entry in
-                    PlayerHoleEditor(
-                        playerName: round.players.first(where: { $0.id == entry.playerId })?.name ?? "選手",
-                        entry: entry,
-                        par: hole.par,
-                        onSave: { updated in
-                            var r = store.rounds[ri]
-                            if let ei = r.holes[hi].entries.firstIndex(where: { $0.id == updated.id }) {
-                                r.holes[hi].entries[ei] = updated
-                            }
-                            if updated.nearestPinContender {
-                                for i in r.holes[hi].entries.indices where r.holes[hi].entries[i].id != updated.id {
-                                    r.holes[hi].entries[i].nearestPinContender = false
-                                }
-                            }
-                            store.updateRound(r)
-                            recomputeCarry(from: r)
-                            selectedPlayerId = nil
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("入力") {
+                            openEditor(round: round, hole: hole)
                         }
+                    }
+                }
+                .sheet(isPresented: $showEditor) {
+                    CompactScoreEditor(
+                        entriesByPlayer: $scoreDraft,
+                        players: round.players,
+                        holeNumber: holeNumber,
+                        par: hole.par,
+                        yards: round.yards(forHole: holeNumber),
+                        teeName: round.selectedTeeName,
+                        round: round,
+                        onCommit: {
+                            commit(ri: ri, hi: hi)
+                            showEditor = false
+                        },
+                        onCancel: { showEditor = false }
                     )
+                    .presentationDetents([.large, .medium])
+                    .presentationDragIndicator(.visible)
                 }
             } else {
                 ContentUnavailableView("ホールが見つかりません", systemImage: "flag.slash")
@@ -108,28 +114,47 @@ struct HoleEntryView: View {
         }
     }
 
-    private func selectedEntryBinding(ri: Int, hi: Int) -> Binding<PlayerHoleEntry?> {
-        Binding(
-            get: {
-                guard let id = selectedPlayerId else { return nil }
-                return store.rounds[ri].holes[hi].entries.first(where: { $0.playerId == id })
-            },
-            set: { newVal in
-                if newVal == nil { selectedPlayerId = nil }
+    private func openEditor(round: GolfRound, hole: HoleRecord) {
+        var draft: [UUID: PlayerHoleEntry] = [:]
+        for p in round.players {
+            var e = hole.entries.first(where: { $0.playerId == p.id }) ?? PlayerHoleEntry(playerId: p.id)
+            e.playerId = p.id
+            if e.strokes == 0 { e.strokes = hole.par }
+            draft[p.id] = e
+        }
+        scoreDraft = draft
+        showEditor = true
+    }
+
+    private func commit(ri: Int, hi: Int) {
+        var r = store.rounds[ri]
+        for player in r.players {
+            guard var saved = scoreDraft[player.id] else { continue }
+            saved.playerId = player.id
+            if let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == player.id }) {
+                saved.id = r.holes[hi].entries[ei].id
+                r.holes[hi].entries[ei] = saved
+            } else {
+                r.holes[hi].entries.append(saved)
             }
-        )
+        }
+        store.updateRound(r)
+        recomputeCarry(from: r)
     }
 
     private func summary(_ e: PlayerHoleEntry) -> String {
         var bits: [String] = []
         if e.putts > 0 { bits.append("\(e.putts)パット") }
-        if e.declaredReach { bits.append("リーチ") }
-        if e.nameLick { bits.append("舐め") }
-        if e.awaya { bits.append("あわや") }
-        if e.banker { bits.append("砂") }
-        if e.nearestPinContender { bits.append("ニアピン") }
-        if e.fireman { bits.append("消防隊") }
-        if let m = e.medal { bits.append(m.label) }
+        if e.manualPointAdjust != 0 {
+            bits.append("調整\(e.manualPointAdjust > 0 ? "+" : "")\(e.manualPointAdjust)")
+        }
+        bits.append(contentsOf: e.eventLog.map(\.label))
+        if bits.isEmpty {
+            if e.declaredReach { bits.append("リーチ") }
+            if e.nameLick { bits.append("舐め") }
+            if e.awaya { bits.append("あわや") }
+            if let m = e.medal { bits.append(m.label) }
+        }
         return bits.isEmpty ? "タップして入力" : bits.joined(separator: " · ")
     }
 
@@ -149,71 +174,5 @@ struct HoleEntryView: View {
             carry = scored.nearestPinCarryOut
         }
         store.updateRound(r)
-    }
-}
-
-private struct PlayerHoleEditor: View {
-    let playerName: String
-    @State var entry: PlayerHoleEntry
-    let par: Int
-    let onSave: (PlayerHoleEntry) -> Void
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("スコア") {
-                    Stepper("打数: \(entry.strokes)", value: $entry.strokes, in: 0...15)
-                    Stepper("パット: \(entry.putts)", value: $entry.putts, in: 0...8)
-                    Text("対パー: \(entry.strokes == 0 ? "—" : "\(entry.strokes - par)")")
-                        .foregroundStyle(.secondary)
-                }
-
-                Section("基本メダル") {
-                    Picker("メダル", selection: $entry.medal) {
-                        Text("なし").tag(Optional<OlympicMedal>.none)
-                        ForEach(OlympicMedal.allCases) { m in
-                            Text("\(m.label)（\(m.points)）").tag(Optional(m))
-                        }
-                    }
-                    Toggle("グリーン外チップイン（ダイヤ）", isOn: $entry.chipInFromOffGreen)
-                }
-
-                Section("付加価値") {
-                    Toggle("竿を宣言", isOn: $entry.declaredPin)
-                    Toggle("竿距離1ピン以上", isOn: $entry.pinDistanceQualified)
-                    Toggle("外竿を宣言", isOn: $entry.outerPinDeclared)
-                    Stepper("アプローチ後のグリーン上打数: \(entry.strokesOnGreenAfterApproach)", value: $entry.strokesOnGreenAfterApproach, in: 0...5)
-                    Toggle("砂（バンカー）", isOn: $entry.banker)
-                    Toggle("パーオン", isOn: $entry.parOn)
-                    Toggle("バーディーオン", isOn: $entry.birdieOn)
-                    Toggle("ニアピン権利", isOn: $entry.nearestPinContender)
-                    Toggle("消防隊", isOn: $entry.fireman)
-                    Toggle("1打目グリーンオン", isOn: $entry.greenInRegulationTee)
-                }
-
-                Section("リーチ・ペナルティ") {
-                    Toggle("リーチ宣言", isOn: $entry.declaredReach)
-                    Toggle("舐め（カップエッジ）", isOn: $entry.nameLick)
-                    Toggle("あわや（フリンジ）", isOn: $entry.awaya)
-                }
-
-                Section("メモ") {
-                    TextField("任意メモ", text: $entry.notes, axis: .vertical)
-                }
-            }
-            .navigationTitle(playerName)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
-                        onSave(entry)
-                        dismiss()
-                    }
-                }
-            }
-        }
     }
 }

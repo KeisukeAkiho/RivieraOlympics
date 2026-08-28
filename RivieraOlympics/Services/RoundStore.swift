@@ -274,7 +274,8 @@ final class RoundStore: ObservableObject {
         homeTee: String = "",
         handicap: String = "",
         note: String = "",
-        honestJohn: Int = 90
+        honestJohn: Int = 90,
+        excludeFromOlympicsSettlement: Bool = false
     ) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -284,7 +285,8 @@ final class RoundStore: ObservableObject {
             homeTee: homeTee.trimmingCharacters(in: .whitespacesAndNewlines),
             handicap: handicap.trimmingCharacters(in: .whitespacesAndNewlines),
             note: note.trimmingCharacters(in: .whitespacesAndNewlines),
-            defaultHonestJohn: honestJohn
+            defaultHonestJohn: honestJohn,
+            excludeFromOlympicsSettlement: excludeFromOlympicsSettlement
         ))
         players.sort(by: Self.playerSort)
         save()
@@ -454,6 +456,23 @@ final class RoundStore: ObservableObject {
     }
 
     // MARK: - Rounds
+
+    func reorderRoundPlayers(roundId: UUID, orderedIds: [UUID]) {
+        guard let idx = rounds.firstIndex(where: { $0.id == roundId }), !rounds[idx].isSettled else { return }
+        let current = rounds[idx].players
+        let map = Dictionary(uniqueKeysWithValues: current.map { ($0.id, $0) })
+        var next: [Player] = []
+        next.reserveCapacity(current.count)
+        for id in orderedIds {
+            if let p = map[id] { next.append(p) }
+        }
+        for p in current where !next.contains(where: { $0.id == p.id }) {
+            next.append(p)
+        }
+        guard next.map(\.id) != current.map(\.id) else { return }
+        rounds[idx].players = next
+        save()
+    }
 
     func createRound(
         title: String,

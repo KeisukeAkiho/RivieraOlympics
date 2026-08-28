@@ -5,7 +5,7 @@ struct NewRoundView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var title = Self.defaultRoundTitle()
-    @State private var selected: Set<UUID> = []
+    @State private var selectedOrder: [UUID] = []
     @State private var playerSearch = ""
     @State private var options = RoundOptions()
     @State private var selectedCourseId: UUID?
@@ -36,7 +36,9 @@ struct NewRoundView: View {
     }
 
     private var selectedPlayersInOrder: [RegisteredPlayer] {
-        store.activePlayers.filter { selected.contains($0.id) }
+        selectedOrder.compactMap { id in
+            store.players.first(where: { $0.id == id })
+        }
     }
 
     var body: some View {
@@ -92,31 +94,34 @@ struct NewRoundView: View {
 
                 CompetitionGamesSection(options: $options)
 
+                HoleMatchSettingsSection(
+                    options: $options,
+                    players: selectedPlayersInOrder.map { (id: $0.id, name: $0.name) }
+                )
+
+                OlympicsSettlementExclusionSection(
+                    players: selectedPlayersInOrder.map { (id: $0.id, name: $0.name) },
+                    options: $options
+                )
+
                 if !selectedPlayersInOrder.isEmpty {
-                    Section("選択中") {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(selectedPlayersInOrder) { p in
-                                    Button {
-                                        selected.remove(p.id)
-                                    } label: {
-                                        HStack(spacing: 4) {
-                                            Text(p.name)
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.caption)
-                                        }
-                                        .font(.subheadline)
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(RivieraTheme.fairway.opacity(0.18))
-                                        .clipShape(Capsule())
-                                    }
-                                    .buttonStyle(.plain)
-                                }
+                    Section {
+                        PlayerOrderEditor(
+                            players: selectedPlayersInOrder.map { (id: $0.id, name: $0.name) },
+                            canEdit: true,
+                            showsRemove: true,
+                            onReorder: { ids in selectedOrder = ids },
+                            onRemove: { id in
+                                selectedOrder.removeAll { $0 == id }
+                                options.setExcludedFromOlympicsSettlement(id, excluded: false)
                             }
-                            .padding(.vertical, 2)
-                        }
+                        )
+                    } header: {
+                        Text("選択中（表示・入力順）")
+                    } footer: {
+                        Text("上から順にスコアカード・打数入力・オリンピック点に並びます。矢印で並べ替え。")
                     }
+                    .environment(\.editMode, .constant(.active))
                 }
 
                 Section {
@@ -147,15 +152,19 @@ struct NewRoundView: View {
                     } else {
                         ForEach(filteredPlayers) { p in
                             Button {
-                                if selected.contains(p.id) {
-                                    selected.remove(p.id)
+                                if let idx = selectedOrder.firstIndex(of: p.id) {
+                                    selectedOrder.remove(at: idx)
+                                    options.setExcludedFromOlympicsSettlement(p.id, excluded: false)
                                 } else {
-                                    selected.insert(p.id)
+                                    selectedOrder.append(p.id)
+                                    if p.excludeFromOlympicsSettlement {
+                                        options.setExcludedFromOlympicsSettlement(p.id, excluded: true)
+                                    }
                                 }
                             } label: {
                                 HStack(spacing: 12) {
-                                    Image(systemName: selected.contains(p.id) ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(selected.contains(p.id) ? RivieraTheme.fairway : .secondary)
+                                    Image(systemName: selectedOrder.contains(p.id) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selectedOrder.contains(p.id) ? RivieraTheme.fairway : .secondary)
                                         .font(.title3)
                                     VStack(alignment: .leading, spacing: 2) {
                                         HStack(spacing: 6) {
@@ -172,6 +181,11 @@ struct NewRoundView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
                                         }
+                                        if p.excludeFromOlympicsSettlement {
+                                            Text("五輪精算 既定除外")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     Spacer(minLength: 0)
                                 }
@@ -183,8 +197,8 @@ struct NewRoundView: View {
                 } header: {
                     Text("参加プレイヤー（2人以上）")
                 } footer: {
-                    Text("上の欄で絞り込んでタップ選択。選択中 \(selected.count) 人")
-                        .foregroundStyle(selected.count >= 2 ? Color.secondary : RivieraTheme.flag)
+                    Text("上の欄で絞り込んでタップ選択。選択順が初期の並びです。選択中 \(selectedOrder.count) 人")
+                        .foregroundStyle(selectedOrder.count >= 2 ? Color.secondary : RivieraTheme.flag)
                 }
 
                 Section {
@@ -200,17 +214,16 @@ struct NewRoundView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("作成") {
-                        let ids = store.activePlayers.map(\.id).filter { selected.contains($0) }
                         store.createRound(
                             title: title,
-                            playerIds: ids,
+                            playerIds: selectedOrder,
                             options: options,
                             courseId: selectedCourseId,
                             teeName: selectedTeeName.isEmpty ? nil : selectedTeeName
                         )
                         dismiss()
                     }
-                    .disabled(selected.count < 2)
+                    .disabled(selectedOrder.count < 2)
                 }
             }
             .onAppear {

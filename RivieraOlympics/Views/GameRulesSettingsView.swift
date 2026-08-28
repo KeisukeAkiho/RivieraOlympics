@@ -17,13 +17,9 @@ struct GameRulesSettingsView: View {
             }
 
             Section("オリンピック点数") {
-                pointStepper("金", value: $options.olympicsPoints.gold, range: 0...20)
-                pointStepper("銀", value: $options.olympicsPoints.silver, range: 0...20)
-                pointStepper("銅", value: $options.olympicsPoints.bronze, range: 0...20)
-                pointStepper("鉄", value: $options.olympicsPoints.iron, range: 0...20)
                 pointStepper("ダイヤ", value: $options.olympicsPoints.diamond, range: 0...20)
                 pointStepper("竿", value: $options.olympicsPoints.pin, range: 0...20)
-                pointStepper("竿後3パット", value: $options.olympicsPoints.pinThreePutt, range: -20...0)
+                pointStepper("竿失敗", value: $options.olympicsPoints.pinThreePutt, range: -20...0)
                 pointStepper("砂", value: $options.olympicsPoints.banker, range: 0...20)
                 pointStepper("バーディー", value: $options.olympicsPoints.birdie, range: 0...50)
                 pointStepper("イーグル", value: $options.olympicsPoints.eagle, range: 0...50)

@@ -39,11 +39,14 @@ struct RegisteredPlayer: Identifiable, Hashable {
     var isFavorite: Bool = false
     /// Soft-hide from pickers / default lists (data kept).
     var isHidden: Bool = false
+    /// New rounds start with this player omitted from Olympics money settlement.
+    var excludeFromOlympicsSettlement: Bool = false
 }
 
 extension RegisteredPlayer: Codable {
     enum CodingKeys: String, CodingKey {
         case id, name, homeCourse, homeTee, handicap, note, defaultHonestJohn, createdAt, isFavorite, isHidden
+        case excludeFromOlympicsSettlement
     }
 
     init(from decoder: Decoder) throws {
@@ -58,6 +61,7 @@ extension RegisteredPlayer: Codable {
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
         isHidden = try c.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
+        excludeFromOlympicsSettlement = try c.decodeIfPresent(Bool.self, forKey: .excludeFromOlympicsSettlement) ?? false
     }
 }
 
@@ -233,13 +237,39 @@ extension Player: Codable {
     }
 }
 
+enum HoleMatchMode: String, Codable, CaseIterable, Identifiable {
+    case allPlayAll
+    case sides
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .allPlayAll: return "全員対抗"
+        case .sides: return "サイド対抗"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .allPlayAll:
+            return "最少打数が1人だけのとき、その人がホール獲得（個人戦）。"
+        case .sides:
+            return "サイドA対サイドB。人数は自由（1対1、1対3、2対2など）。各サイドの最少打数で勝敗。"
+        }
+    }
+}
+
 struct RoundOptions: Equatable {
-    var stakeRate: Int = 50
+    var stakeRate: Int = 20
     var settlementCap: Int = 0
     var penaltiesEnabled: Bool = true
     var olympicsEnabled: Bool = true
     var lasVegasEnabled: Bool = false
     var holeMatchEnabled: Bool = false
+    var holeMatchMode: HoleMatchMode = .allPlayAll
+    var holeMatchSideA: [UUID] = []
+    var holeMatchSideB: [UUID] = []
     var sonchoEnabled: Bool = false
     var snakeEnabled: Bool = false
     var snakeSettlePerNine: Bool = true
@@ -251,6 +281,22 @@ struct RoundOptions: Equatable {
     var lasVegasRules: LasVegasRules = .default
     /// 最後に適用／上書きした名前付きプリセット（任意）
     var activeRulePresetId: UUID? = nil
+    /// オリンピック精算の人数・合計点から外す選手（点数入力自体は可能）
+    var olympicsExcludedPlayerIds: [UUID] = []
+
+    func isExcludedFromOlympicsSettlement(_ playerId: UUID) -> Bool {
+        olympicsExcludedPlayerIds.contains(playerId)
+    }
+
+    mutating func setExcludedFromOlympicsSettlement(_ playerId: UUID, excluded: Bool) {
+        if excluded {
+            if !olympicsExcludedPlayerIds.contains(playerId) {
+                olympicsExcludedPlayerIds.append(playerId)
+            }
+        } else {
+            olympicsExcludedPlayerIds.removeAll { $0 == playerId }
+        }
+    }
 
     mutating func applyRulePreset(_ preset: NamedGameRulePreset) {
         olympicsPoints = preset.olympicsPoints
@@ -264,19 +310,24 @@ extension RoundOptions: Codable {
     enum CodingKeys: String, CodingKey {
         case stakeRate, settlementCap, penaltiesEnabled, olympicsEnabled
         case lasVegasEnabled, holeMatchEnabled
+        case holeMatchMode, holeMatchSideA, holeMatchSideB
         case sonchoEnabled, snakeEnabled, snakeSettlePerNine, honestJohnEnabled
         case lasVegasTeamA, lasVegasTeamB
         case olympicsPoints, customPointRules, lasVegasRules, activeRulePresetId
+        case olympicsExcludedPlayerIds
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        stakeRate = try c.decodeIfPresent(Int.self, forKey: .stakeRate) ?? 50
+        stakeRate = try c.decodeIfPresent(Int.self, forKey: .stakeRate) ?? 20
         settlementCap = try c.decodeIfPresent(Int.self, forKey: .settlementCap) ?? 0
         penaltiesEnabled = try c.decodeIfPresent(Bool.self, forKey: .penaltiesEnabled) ?? true
         olympicsEnabled = try c.decodeIfPresent(Bool.self, forKey: .olympicsEnabled) ?? true
         lasVegasEnabled = try c.decodeIfPresent(Bool.self, forKey: .lasVegasEnabled) ?? false
         holeMatchEnabled = try c.decodeIfPresent(Bool.self, forKey: .holeMatchEnabled) ?? false
+        holeMatchMode = try c.decodeIfPresent(HoleMatchMode.self, forKey: .holeMatchMode) ?? .allPlayAll
+        holeMatchSideA = try c.decodeIfPresent([UUID].self, forKey: .holeMatchSideA) ?? []
+        holeMatchSideB = try c.decodeIfPresent([UUID].self, forKey: .holeMatchSideB) ?? []
         sonchoEnabled = try c.decodeIfPresent(Bool.self, forKey: .sonchoEnabled) ?? false
         snakeEnabled = try c.decodeIfPresent(Bool.self, forKey: .snakeEnabled) ?? false
         snakeSettlePerNine = try c.decodeIfPresent(Bool.self, forKey: .snakeSettlePerNine) ?? true
@@ -287,6 +338,7 @@ extension RoundOptions: Codable {
         customPointRules = try c.decodeIfPresent([CustomPointRule].self, forKey: .customPointRules) ?? []
         lasVegasRules = try c.decodeIfPresent(LasVegasRules.self, forKey: .lasVegasRules) ?? .default
         activeRulePresetId = try c.decodeIfPresent(UUID.self, forKey: .activeRulePresetId)
+        olympicsExcludedPlayerIds = try c.decodeIfPresent([UUID].self, forKey: .olympicsExcludedPlayerIds) ?? []
     }
 }
 
@@ -302,6 +354,10 @@ struct PlayerHoleEntry: Identifiable, Equatable {
     var banker: Bool = false
     var nameLick: Bool = false
     var awaya: Bool = false
+    /// Explicit 3-putt penalty (default −1). Independent of the putt stepper.
+    var markedThreePutt: Bool = false
+    /// Explicit pin miss penalty (default −2).
+    var pinFailed: Bool = false
     var parOn: Bool = false
     var birdieOn: Bool = false
     var nearestPinContender: Bool = false
@@ -320,16 +376,27 @@ struct PlayerHoleEntry: Identifiable, Equatable {
     var manualPointAdjust: Int = 0
     /// 独自ルールON（CustomPointRule.id）
     var customActiveRuleIds: [UUID] = []
+    /// Button-recorded history (reach, name lick, etc.). Independent of stroke score.
+    var eventLog: [OlympicEventRecord] = []
+}
+
+/// Named Olympics event recorded from the score sheet (not a stroke).
+struct OlympicEventRecord: Identifiable, Codable, Equatable {
+    var id: UUID = UUID()
+    var code: String
+    var label: String
+    var createdAt: Date = Date()
 }
 
 extension PlayerHoleEntry: Codable {
     enum CodingKeys: String, CodingKey {
         case id, playerId, strokes, putts, medal, chipInFromOffGreen
         case declaredPin, pinDistanceQualified, banker, nameLick, awaya
+        case markedThreePutt, pinFailed
         case parOn, birdieOn, nearestPinContender, fireman, declaredReach
         case outerPinDeclared, greenInRegulationTee, strokesOnGreenAfterApproach, notes
         case pinPointsOverride, bankerPointsOverride, parOnPointsOverride, birdieOnPointsOverride
-        case manualPointAdjust, customActiveRuleIds
+        case manualPointAdjust, customActiveRuleIds, eventLog
     }
 
     init(from decoder: Decoder) throws {
@@ -345,6 +412,8 @@ extension PlayerHoleEntry: Codable {
         banker = try c.decodeIfPresent(Bool.self, forKey: .banker) ?? false
         nameLick = try c.decodeIfPresent(Bool.self, forKey: .nameLick) ?? false
         awaya = try c.decodeIfPresent(Bool.self, forKey: .awaya) ?? false
+        markedThreePutt = try c.decodeIfPresent(Bool.self, forKey: .markedThreePutt) ?? false
+        pinFailed = try c.decodeIfPresent(Bool.self, forKey: .pinFailed) ?? false
         parOn = try c.decodeIfPresent(Bool.self, forKey: .parOn) ?? false
         birdieOn = try c.decodeIfPresent(Bool.self, forKey: .birdieOn) ?? false
         nearestPinContender = try c.decodeIfPresent(Bool.self, forKey: .nearestPinContender) ?? false
@@ -360,6 +429,7 @@ extension PlayerHoleEntry: Codable {
         birdieOnPointsOverride = try c.decodeIfPresent(Int.self, forKey: .birdieOnPointsOverride)
         manualPointAdjust = try c.decodeIfPresent(Int.self, forKey: .manualPointAdjust) ?? 0
         customActiveRuleIds = try c.decodeIfPresent([UUID].self, forKey: .customActiveRuleIds) ?? []
+        eventLog = try c.decodeIfPresent([OlympicEventRecord].self, forKey: .eventLog) ?? []
     }
 
     func encode(to encoder: Encoder) throws {
@@ -375,6 +445,8 @@ extension PlayerHoleEntry: Codable {
         try c.encode(banker, forKey: .banker)
         try c.encode(nameLick, forKey: .nameLick)
         try c.encode(awaya, forKey: .awaya)
+        try c.encode(markedThreePutt, forKey: .markedThreePutt)
+        try c.encode(pinFailed, forKey: .pinFailed)
         try c.encode(parOn, forKey: .parOn)
         try c.encode(birdieOn, forKey: .birdieOn)
         try c.encode(nearestPinContender, forKey: .nearestPinContender)
@@ -390,16 +462,41 @@ extension PlayerHoleEntry: Codable {
         try c.encodeIfPresent(birdieOnPointsOverride, forKey: .birdieOnPointsOverride)
         try c.encode(manualPointAdjust, forKey: .manualPointAdjust)
         try c.encode(customActiveRuleIds, forKey: .customActiveRuleIds)
+        try c.encode(eventLog, forKey: .eventLog)
     }
 }
 
-struct HoleRecord: Identifiable, Codable, Equatable {
+struct HoleRecord: Identifiable, Equatable {
     var id: UUID = UUID()
     var holeNumber: Int
     var par: Int
     var nearestPinCarryIn: Int = 0
     var entries: [PlayerHoleEntry] = []
     var notes: String = ""
+    /// When true, hole match uses the manual fields instead of scores.
+    var holeMatchManual: Bool = false
+    var holeMatchManualDraw: Bool = false
+    var holeMatchManualWinnerIds: [UUID] = []
+}
+
+extension HoleRecord: Codable {
+    enum CodingKeys: String, CodingKey {
+        case id, holeNumber, par, nearestPinCarryIn, entries, notes
+        case holeMatchManual, holeMatchManualDraw, holeMatchManualWinnerIds
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        holeNumber = try c.decode(Int.self, forKey: .holeNumber)
+        par = try c.decode(Int.self, forKey: .par)
+        nearestPinCarryIn = try c.decodeIfPresent(Int.self, forKey: .nearestPinCarryIn) ?? 0
+        entries = try c.decodeIfPresent([PlayerHoleEntry].self, forKey: .entries) ?? []
+        notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? ""
+        holeMatchManual = try c.decodeIfPresent(Bool.self, forKey: .holeMatchManual) ?? false
+        holeMatchManualDraw = try c.decodeIfPresent(Bool.self, forKey: .holeMatchManualDraw) ?? false
+        holeMatchManualWinnerIds = try c.decodeIfPresent([UUID].self, forKey: .holeMatchManualWinnerIds) ?? []
+    }
 }
 
 struct GolfRound: Identifiable, Equatable {
@@ -468,6 +565,12 @@ struct GolfRound: Identifiable, Equatable {
         var round = GolfRound(title: title)
         round.players = registered.map { Player(from: $0) }
         round.options = options
+        let defaultExcluded = registered.filter(\.excludeFromOlympicsSettlement).map(\.id)
+        if !defaultExcluded.isEmpty {
+            var set = Set(round.options.olympicsExcludedPlayerIds)
+            defaultExcluded.forEach { set.insert($0) }
+            round.options.olympicsExcludedPlayerIds = registered.map(\.id).filter { set.contains($0) }
+        }
         if let course {
             round.applyCourse(course, teeName: teeName)
         } else {
@@ -566,6 +669,7 @@ struct PlayerTotals: Identifiable, Equatable {
     var honestJohnYen: Int
     var isSoncho: Bool
     var netYen: Int
+    var olympicsSettlementExcluded: Bool = false
 }
 
 extension PlayerTotals: Codable {
@@ -573,6 +677,7 @@ extension PlayerTotals: Codable {
         case playerId, name, grossScore, olympicPoints, olympicUnits
         case holeMatchWins, holeMatchYen, lasVegasYen, olympicYen
         case sonchoYen, snakeYen, honestJohnPoints, honestJohnYen, isSoncho, netYen
+        case olympicsSettlementExcluded
     }
 
     init(from decoder: Decoder) throws {
@@ -592,6 +697,7 @@ extension PlayerTotals: Codable {
         honestJohnYen = try c.decodeIfPresent(Int.self, forKey: .honestJohnYen) ?? 0
         isSoncho = try c.decodeIfPresent(Bool.self, forKey: .isSoncho) ?? false
         netYen = try c.decodeIfPresent(Int.self, forKey: .netYen) ?? 0
+        olympicsSettlementExcluded = try c.decodeIfPresent(Bool.self, forKey: .olympicsSettlementExcluded) ?? false
     }
 }
 

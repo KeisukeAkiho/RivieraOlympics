@@ -200,6 +200,7 @@ struct PlayerEditorSheet: View {
     @State private var handicap = ""
     @State private var note = ""
     @State private var honestJohn = 90
+    @State private var excludeFromOlympicsSettlement = false
 
     private var isNew: Bool { player == nil }
 
@@ -227,6 +228,10 @@ struct PlayerEditorSheet: View {
                 }
                 Section("その他") {
                     Stepper("オネストジョン申告: \(honestJohn)", value: $honestJohn, in: 60...140)
+                    Toggle("オリンピック精算から既定で除外", isOn: $excludeFromOlympicsSettlement)
+                    Text("ON にすると、新しいラウンドに入れたとき最初から精算計算の対象外になります。点数入力はできます。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     TextField("メモ", text: $note, axis: .vertical)
                         .lineLimit(2...4)
                 }
@@ -255,6 +260,7 @@ struct PlayerEditorSheet: View {
                     handicap = player.handicap
                     note = player.note
                     honestJohn = player.defaultHonestJohn
+                    excludeFromOlympicsSettlement = player.excludeFromOlympicsSettlement
                 }
             }
         }
@@ -281,6 +287,7 @@ struct PlayerEditorSheet: View {
             existing.handicap = handicap
             existing.note = note
             existing.defaultHonestJohn = honestJohn
+            existing.excludeFromOlympicsSettlement = excludeFromOlympicsSettlement
             store.updatePlayer(existing)
         } else {
             store.addPlayer(
@@ -289,7 +296,8 @@ struct PlayerEditorSheet: View {
                 homeTee: homeTee,
                 handicap: handicap,
                 note: note,
-                honestJohn: honestJohn
+                honestJohn: honestJohn,
+                excludeFromOlympicsSettlement: excludeFromOlympicsSettlement
             )
         }
         dismiss()
@@ -321,6 +329,10 @@ struct PlayerDetailView: View {
                     }
                     if !p.note.isEmpty {
                         Text(p.note).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                    if p.excludeFromOlympicsSettlement {
+                        Label("オリンピック精算から既定で除外", systemImage: "person.slash")
+                            .foregroundStyle(.secondary)
                     }
                     Button {
                         store.toggleFavoritePlayer(id: p.id)
