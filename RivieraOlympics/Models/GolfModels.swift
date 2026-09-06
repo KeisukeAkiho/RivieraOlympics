@@ -630,11 +630,13 @@ extension GolfRound: Codable {
 // MARK: - Settlement DTOs
 
 struct PointLine: Identifiable, Codable, Equatable {
-    var id: UUID = UUID()
     var code: String
     var label: String
     var points: Int
     var multipliedByReach: Bool = false
+
+    /// Stable identity so SwiftUI ForEach does not churn on every preview recalculation.
+    var id: String { code }
 }
 
 struct PlayerHoleOlympicsResult: Codable, Equatable {

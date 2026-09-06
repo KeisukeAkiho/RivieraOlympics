@@ -75,13 +75,16 @@ struct CompactScoreEditor: View {
 
     private var pts: OlympicsPointRules { round.options.olympicsPoints }
     private var olympicsEnabled: Bool { round.options.olympicsEnabled }
-    private var carryIn: Int { OlympicsCalculator.carryIn(forHole: holeNumber, round: round) }
-
-    private var holePreview: HoleOlympicsResult {
-        OlympicsStatus.previewHole(round: round, holeNumber: holeNumber, drafts: entriesByPlayer)
-    }
 
     var body: some View {
+        // Compute once per body refresh — avoid re-scoring per player / per field access.
+        let carryIn = olympicsEnabled
+            ? OlympicsCalculator.carryIn(forHole: holeNumber, round: round)
+            : 0
+        let holePreview = olympicsEnabled
+            ? OlympicsStatus.previewHole(round: round, holeNumber: holeNumber, drafts: entriesByPlayer)
+            : HoleOlympicsResult(holeNumber: holeNumber, nearestPinCarryOut: 0, perPlayer: [])
+
         NavigationStack {
             List {
                 Section {
@@ -98,7 +101,7 @@ struct CompactScoreEditor: View {
 
                 Section("全員の入力") {
                     ForEach(Array(players.enumerated()), id: \.element.id) { index, player in
-                        playerCard(player, themeIndex: index)
+                        playerCard(player, themeIndex: index, holePreview: holePreview, carryIn: carryIn)
                     }
                 }
 
@@ -131,15 +134,21 @@ struct CompactScoreEditor: View {
         }
     }
 
-    private func playerCard(_ player: Player, themeIndex: Int) -> some View {
+    private func playerCard(
+        _ player: Player,
+        themeIndex: Int,
+        holePreview: HoleOlympicsResult,
+        carryIn: Int
+    ) -> some View {
         let entry = entriesByPlayer[player.id] ?? PlayerHoleEntry(playerId: player.id)
         let strokes = entry.strokes
         let toPar = strokes > 0 ? strokes - par : 0
         let entered = strokes > 0
         let theme = PlayerTheme.color(at: themeIndex)
-        let olympicTotal = holePreview.perPlayer.first(where: { $0.playerId == player.id })?.totalPoints ?? 0
-        let olympicLines = holePreview.perPlayer.first(where: { $0.playerId == player.id })?.lines ?? []
-        let reachOn = holePreview.perPlayer.first(where: { $0.playerId == player.id })?.reachApplied ?? false
+        let playerOlympics = holePreview.perPlayer.first(where: { $0.playerId == player.id })
+        let olympicTotal = playerOlympics?.totalPoints ?? 0
+        let olympicLines = playerOlympics?.lines ?? []
+        let reachOn = playerOlympics?.reachApplied ?? false
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
@@ -216,10 +225,10 @@ struct CompactScoreEditor: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
 
-                chipGrid(playerId: player.id, entry: entry, actions: OlympicQuickAction.primary)
+                chipGrid(playerId: player.id, entry: entry, actions: OlympicQuickAction.primary, carryIn: carryIn)
 
                 DisclosureGroup("その他") {
-                    chipGrid(playerId: player.id, entry: entry, actions: OlympicQuickAction.extra)
+                    chipGrid(playerId: player.id, entry: entry, actions: OlympicQuickAction.extra, carryIn: carryIn)
                     let customs = round.options.customPointRules.filter(\.enabled)
                     if !customs.isEmpty {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 6)], spacing: 6) {
@@ -265,7 +274,7 @@ struct CompactScoreEditor: View {
 
                 if !olympicLines.isEmpty {
                     DisclosureGroup("このホールの点数内訳") {
-                        ForEach(olympicLines) { line in
+                        ForEach(olympicLines, id: \.code) { line in
                             HStack {
                                 Text(line.label).font(.caption2)
                                 Spacer()
@@ -290,7 +299,7 @@ struct CompactScoreEditor: View {
         }
     }
 
-    private func chipGrid(playerId: UUID, entry: PlayerHoleEntry, actions: [OlympicQuickAction]) -> some View {
+    private func chipGrid(playerId: UUID, entry: PlayerHoleEntry, actions: [OlympicQuickAction], carryIn: Int) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 6)], spacing: 6) {
             ForEach(actions) { action in
                 let on = action.isOn(entry)
@@ -333,7 +342,12 @@ struct CompactScoreEditor: View {
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.secondary)
             HStack(spacing: 8) {
-                Button(action: onMinus) {
+                Button {
+                    // Avoid animation thrashing when the user mashes ±.
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t, onMinus)
+                } label: {
                     Image(systemName: "minus.circle.fill")
                         .font(.title2)
                         .foregroundStyle(.secondary)
@@ -343,7 +357,12 @@ struct CompactScoreEditor: View {
                     .font(.title3.monospacedDigit().weight(.bold))
                     .foregroundStyle(color)
                     .frame(minWidth: 36)
-                Button(action: onPlus) {
+                    .contentTransition(.identity)
+                Button {
+                    var t = Transaction()
+                    t.disablesAnimations = true
+                    withTransaction(t, onPlus)
+                } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.title2)
                         .foregroundStyle(RivieraTheme.fairway)
@@ -402,7 +421,9 @@ struct CompactScoreEditor: View {
     }
 
     private func adjustOlympicPoints(playerId: UUID, delta: Int) {
-        let current = holePreview.perPlayer.first(where: { $0.playerId == playerId })?.totalPoints ?? 0
+        // One preview for this tap; clamp the displayed total, then store the delta on manual adjust.
+        let current = OlympicsStatus.previewHole(round: round, holeNumber: holeNumber, drafts: entriesByPlayer)
+            .perPlayer.first(where: { $0.playerId == playerId })?.totalPoints ?? 0
         let next = max(-40, min(80, current + delta))
         guard next != current else { return }
         mutate(playerId) { $0.manualPointAdjust += (next - current) }
@@ -421,7 +442,9 @@ struct CompactScoreEditor: View {
         entriesByPlayer[playerId] = e
 
         if on && action == .nearestPin {
-            for pid in entriesByPlayer.keys where pid != playerId {
+            // Snapshot keys first — mutating the dictionary while iterating keys can trap.
+            let otherIds = Array(entriesByPlayer.keys.filter { $0 != playerId })
+            for pid in otherIds {
                 mutate(pid) {
                     if $0.nearestPinContender {
                         $0.nearestPinContender = false
