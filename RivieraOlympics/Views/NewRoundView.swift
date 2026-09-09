@@ -94,9 +94,19 @@ struct NewRoundView: View {
 
                 CompetitionGamesSection(options: $options)
 
+                StakeRatePickerSections(options: $options)
+
                 HoleMatchSettingsSection(
                     options: $options,
                     players: selectedPlayersInOrder.map { (id: $0.id, name: $0.name) }
+                )
+
+                NigiriSettingsSection(
+                    options: $options,
+                    players: selectedPlayersInOrder.map { (id: $0.id, name: $0.name) },
+                    defaultHandicap: { id in
+                        NigiriCalculator.parseHandicap(store.players.first(where: { $0.id == id })?.handicap ?? "")
+                    }
                 )
 
                 OlympicsSettlementExclusionSection(
@@ -114,6 +124,7 @@ struct NewRoundView: View {
                             onRemove: { id in
                                 selectedOrder.removeAll { $0 == id }
                                 options.setExcludedFromOlympicsSettlement(id, excluded: false)
+                                options.setNigiriParticipant(id, included: false)
                             }
                         )
                     } header: {
@@ -155,6 +166,7 @@ struct NewRoundView: View {
                                 if let idx = selectedOrder.firstIndex(of: p.id) {
                                     selectedOrder.remove(at: idx)
                                     options.setExcludedFromOlympicsSettlement(p.id, excluded: false)
+                                    options.setNigiriParticipant(p.id, included: false)
                                 } else {
                                     selectedOrder.append(p.id)
                                     if p.excludeFromOlympicsSettlement {

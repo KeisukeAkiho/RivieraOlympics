@@ -206,20 +206,21 @@ struct CompactScoreEditor: View {
             }
 
             if olympicsEnabled {
-                HStack {
-                    Text("パット")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Stepper(value: Binding(
-                        get: { entry.putts },
-                        set: { newVal in mutate(player.id) { $0.putts = newVal } }
-                    ), in: 0...8) {
-                        Text(entry.putts == 0 ? "未" : "\(entry.putts)")
-                            .font(.subheadline.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.blue)
-                            .frame(minWidth: 28, alignment: .trailing)
+                let puttsClamped = min(8, max(0, entry.putts))
+                HStack(alignment: .center, spacing: 16) {
+                    labeledStepper(
+                        title: "パット",
+                        valueText: puttsClamped == 0 ? "未" : "\(puttsClamped)",
+                        color: puttsClamped == 0 ? .secondary : .blue
+                    ) {
+                        mutate(player.id) { $0.putts = max(0, min(8, $0.putts) - 1) }
+                    } onPlus: {
+                        mutate(player.id) {
+                            let current = min(8, max(0, $0.putts))
+                            $0.putts = min(8, current + 1)
+                        }
                     }
+                    Color.clear.frame(maxWidth: .infinity)
                 }
                 Text("リーチ成否・焼き鳥判定用。3パットと竿失敗は下のボタンで入力します。")
                     .font(.caption2)
@@ -274,7 +275,7 @@ struct CompactScoreEditor: View {
 
                 if !olympicLines.isEmpty {
                     DisclosureGroup("このホールの点数内訳") {
-                        ForEach(olympicLines, id: \.code) { line in
+                        ForEach(olympicLines) { line in
                             HStack {
                                 Text(line.label).font(.caption2)
                                 Spacer()

@@ -4,7 +4,6 @@ struct OptionsView: View {
     @EnvironmentObject private var store: RoundStore
     let roundId: UUID
 
-    @State private var customStakeDraft = 30
     @State private var customCapDraft = 3_000
 
     var body: some View {
@@ -20,59 +19,10 @@ struct OptionsView: View {
 
     private var optionsForm: some View {
         Form {
-            Section("掛け金") {
-                Text("現在の選択: \(current.options.stakeRate)")
-                    .font(.headline)
-
-                amountChoiceGrid(
-                    values: stakeChoicesForDisplay,
-                    selected: current.options.stakeRate,
-                    isPreset: store.isPresetStakeRate,
-                    label: { "\($0)" },
-                    onSelect: selectStake
-                )
-
-                if !store.availableStakeRates.contains(current.options.stakeRate) {
-                    Text("このラウンドだけ \(current.options.stakeRate) が使われています（候補外）。下から選ぶか登録してください。")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                HStack {
-                    Text("ユーザー指定")
-                    Spacer()
-                    TextField("金額", value: $customStakeDraft, format: .number)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(maxWidth: 100)
-                    Button("登録して選択") {
-                        registerAndSelectCustomStake()
-                    }
-                    .disabled(customStakeDraft <= 0 || current.isSettled)
-                }
-
-                if !store.customStakeRates.isEmpty {
-                    ForEach(store.customStakeRates, id: \.self) { rate in
-                        HStack {
-                            Text("登録済み: \(rate)")
-                            Spacer()
-                            if current.options.stakeRate == rate {
-                                Text("使用中")
-                                    .font(.caption)
-                                    .foregroundStyle(RivieraTheme.fairway)
-                            }
-                        }
-                    }
-                    .onDelete(perform: deleteCustomStakes)
-                    Text("左にスワイプで登録を削除（このラウンドの掛け金自体は変わりません）")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-
-                Text("プリセット（20・50・100・200・500）に加え、任意金額を登録して再利用できます。")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
+            StakeRatePickerSections(
+                options: optionsBinding,
+                isSettled: current.isSettled
+            )
 
             Section("精算上限") {
                 Text("現在の選択: \(capLabel(current.options.settlementCap))")
@@ -136,6 +86,13 @@ struct OptionsView: View {
             HoleMatchSettingsSection(
                 options: optionsBinding,
                 players: current.players.map { (id: $0.id, name: $0.name) },
+                enabled: !current.isSettled
+            )
+
+            NigiriSettingsSection(
+                options: optionsBinding,
+                players: current.players.map { (id: $0.id, name: $0.name) },
+                defaultHandicap: registeredHandicap,
                 enabled: !current.isSettled
             )
 
@@ -295,13 +252,6 @@ struct OptionsView: View {
         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
     }
 
-    /// 候補＋現在値（候補外でも表示）
-    private var stakeChoicesForDisplay: [Int] {
-        var set = Set(store.availableStakeRates)
-        set.insert(current.options.stakeRate)
-        return set.filter { $0 > 0 }.sorted()
-    }
-
     private var capChoicesForDisplay: [Int] {
         var set = Set(store.availableSettlementCaps)
         set.insert(current.options.settlementCap)
@@ -328,29 +278,16 @@ struct OptionsView: View {
                     if opts.holeMatchEnabled {
                         HoleMatchCalculator.ensureSides(&opts, players: r.players)
                     }
+                    opts.pruneNigiriParticipants(validIds: Set(r.players.map(\.id)))
                     r.options = opts
                 }
             }
         )
     }
 
-    private func selectStake(_ rate: Int) {
-        guard rate > 0 else { return }
-        mutate { $0.options.stakeRate = rate }
-    }
-
     private func selectCap(_ cap: Int) {
         guard cap >= 0 else { return }
         mutate { $0.options.settlementCap = cap }
-    }
-
-    private func registerAndSelectCustomStake() {
-        let rate = customStakeDraft
-        guard rate > 0 else { return }
-        if !store.isPresetStakeRate(rate) {
-            store.registerCustomStakeRate(rate)
-        }
-        selectStake(rate)
     }
 
     private func registerAndSelectCustomCap() {
@@ -360,13 +297,6 @@ struct OptionsView: View {
             store.registerCustomSettlementCap(cap)
         }
         selectCap(cap)
-    }
-
-    private func deleteCustomStakes(at offsets: IndexSet) {
-        let rates = offsets.map { store.customStakeRates[$0] }
-        for rate in rates {
-            store.removeCustomStakeRate(rate)
-        }
     }
 
     private func deleteCustomCaps(at offsets: IndexSet) {
@@ -451,9 +381,170 @@ struct OptionsView: View {
         )
     }
 
+    private func registeredHandicap(_ playerId: UUID) -> Int {
+        NigiriCalculator.parseHandicap(store.players.first(where: { $0.id == playerId })?.handicap ?? "")
+    }
+
     private func mutate(_ block: (inout GolfRound) -> Void) {
         guard var r = store.rounds.first(where: { $0.id == roundId }) else { return }
         block(&r)
         store.updateRound(r)
+    }
+}
+
+/// オリンピック / その他ゲームで別々の掛け金を選ぶ
+struct StakeRatePickerSections: View {
+    @EnvironmentObject private var store: RoundStore
+    @Binding var options: RoundOptions
+    var isSettled: Bool = false
+
+    @State private var customStakeDraft = 30
+
+    var body: some View {
+        stakeSection(
+            title: "オリンピックの掛け金",
+            selected: options.stakeRate,
+            footer: "オリンピック点の精算に使います。",
+            onSelect: { options.stakeRate = $0 }
+        )
+        stakeSection(
+            title: "その他ゲームの掛け金",
+            selected: options.gamesStakeRate,
+            footer: "ホールマッチ・ラスベガス・村長・蛇・オネストジョンに使います（個人にぎりは専用の掛け金）。",
+            onSelect: { options.gamesStakeRate = $0 }
+        )
+        customRatesSection
+    }
+
+    private func stakeSection(
+        title: String,
+        selected: Int,
+        footer: String,
+        onSelect: @escaping (Int) -> Void
+    ) -> some View {
+        Section {
+            Text("現在の選択: \(selected)")
+                .font(.headline)
+
+            amountChoiceGrid(values: choicesForDisplay, selected: selected, onSelect: onSelect)
+
+            if !store.availableStakeRates.contains(selected) {
+                Text("このラウンドだけ \(selected) が使われています（候補外）。下から選ぶか登録してください。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack {
+                Text("ユーザー指定")
+                Spacer()
+                TextField("金額", value: $customStakeDraft, format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 100)
+                Button("登録して選択") {
+                    registerAndSelect(onSelect: onSelect)
+                }
+                .disabled(customStakeDraft <= 0 || isSettled)
+            }
+        } header: {
+            Text(title)
+        } footer: {
+            Text(footer)
+        }
+    }
+
+    private var customRatesSection: some View {
+        Section {
+            if !store.customStakeRates.isEmpty {
+                ForEach(store.customStakeRates, id: \.self) { rate in
+                    HStack {
+                        Text("登録済み: \(rate)")
+                        Spacer()
+                        if options.stakeRate == rate {
+                            Text("五輪")
+                                .font(.caption)
+                                .foregroundStyle(RivieraTheme.fairway)
+                        }
+                        if options.gamesStakeRate == rate {
+                            Text("その他")
+                                .font(.caption)
+                                .foregroundStyle(RivieraTheme.fairway)
+                        }
+                    }
+                }
+                .onDelete(perform: deleteCustomStakes)
+                Text("左にスワイプで登録を削除（このラウンドの掛け金自体は変わりません）")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            Text("プリセット（20・50・100・200・500）に加え、任意金額を登録して再利用できます。オリンピックとその他ゲームは別々に選べます。")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        } header: {
+            Text("掛け金の候補")
+        }
+    }
+
+    private func amountChoiceGrid(
+        values: [Int],
+        selected: Int,
+        onSelect: @escaping (Int) -> Void
+    ) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8)], spacing: 8) {
+            ForEach(values, id: \.self) { value in
+                let isSelected = selected == value
+                let preset = store.isPresetStakeRate(value)
+                Button {
+                    onSelect(value)
+                } label: {
+                    VStack(spacing: 2) {
+                        Text("\(value)")
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        if !preset {
+                            Text("登録")
+                                .font(.system(size: 9))
+                                .opacity(0.8)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(isSelected ? RivieraTheme.fairway.opacity(0.22) : Color(.tertiarySystemFill))
+                    .foregroundStyle(isSelected ? RivieraTheme.fairway : .primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(isSelected ? RivieraTheme.fairway : Color.clear, lineWidth: 1.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isSettled)
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+    }
+
+    private var choicesForDisplay: [Int] {
+        var set = Set(store.availableStakeRates)
+        set.insert(options.stakeRate)
+        set.insert(options.gamesStakeRate)
+        return set.filter { $0 > 0 }.sorted()
+    }
+
+    private func registerAndSelect(onSelect: (Int) -> Void) {
+        let rate = customStakeDraft
+        guard rate > 0 else { return }
+        if !store.isPresetStakeRate(rate) {
+            store.registerCustomStakeRate(rate)
+        }
+        onSelect(rate)
+    }
+
+    private func deleteCustomStakes(at offsets: IndexSet) {
+        let rates = offsets.map { store.customStakeRates[$0] }
+        for rate in rates {
+            store.removeCustomStakeRate(rate)
+        }
     }
 }

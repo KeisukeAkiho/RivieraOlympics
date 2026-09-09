@@ -41,6 +41,15 @@ struct CompetitionGamesView: View {
                 enabled: !current.isSettled
             )
 
+            NigiriSettingsSection(
+                options: optionsBinding,
+                players: current.players.map { (id: $0.id, name: $0.name) },
+                defaultHandicap: { id in
+                    NigiriCalculator.parseHandicap(store.players.first(where: { $0.id == id })?.handicap ?? "")
+                },
+                enabled: !current.isSettled
+            )
+
             if current.isSettled {
                 Section {
                     Text("精算確定後は競技内容を変更できません。解除する場合は精算画面から行ってください。")
@@ -89,6 +98,7 @@ struct CompetitionGamesView: View {
                     if opts.holeMatchEnabled {
                         HoleMatchCalculator.ensureSides(&opts, players: r.players)
                     }
+                    opts.pruneNigiriParticipants(validIds: Set(r.players.map(\.id)))
                     r.options = opts
                 }
             }

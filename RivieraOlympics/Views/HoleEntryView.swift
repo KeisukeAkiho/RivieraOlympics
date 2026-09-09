@@ -100,12 +100,16 @@ struct HoleEntryView: View {
                         teeName: round.selectedTeeName,
                         round: round,
                         onCommit: {
-                            commit(ri: ri, hi: hi)
+                            let capturedRi = ri
+                            let capturedHi = hi
                             showEditor = false
+                            Task { @MainActor in
+                                commit(ri: capturedRi, hi: capturedHi)
+                            }
                         },
                         onCancel: { showEditor = false }
                     )
-                    .presentationDetents([.large, .medium])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
             } else {

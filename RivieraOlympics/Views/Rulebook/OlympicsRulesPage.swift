@@ -19,7 +19,7 @@ struct OlympicsRulesPage: View {
                 RuleSectionHeader(icon: "medal.fill", title: "まずはここから", color: RivieraTheme.fairway)
                 RuleCard(title: "オリンピックってなに？", icon: "flag.circle.fill") {
                     RuleParagraph(text: "みんながカップに近づけた順番や、上手なプレーに点をつけ合うゲームです。")
-                    RuleParagraph(text: "点が多いほどよいです。あとで掛け金率（20・50・100など）をかけて、おたがいの精算に使います。")
+                    RuleParagraph(text: "点が多いほどよいです。あとでオリンピック用の掛け金率（20・50・100など）をかけて、おたがいの精算に使います。その他のゲームは別の掛け金を設定できます。")
                     RuleTip(text: "お金を賭けるのはだめです。なかよしの点数ゲームとして楽しもう！")
                 }
 

@@ -17,7 +17,7 @@ struct OtherRulesPage: View {
                 RuleCard(title: "全員対抗（個人戦）", icon: "flag.checkered") {
                     RuleParagraph(text: "そのホールで、いちばん少ない打数の人が1人だけなら、その人がホールをもらいます。")
                     RuleBullet(text: "同じ打数が2人以上 → 引き分け（だれももらえない）", icon: "equal.circle.fill")
-                    RuleBullet(text: "もらったホールごとに、ほかの人から掛け金をもらう", icon: "yensign.circle.fill")
+                    RuleBullet(text: "もらったホールごとに、ほかの人から（その他ゲームの）掛け金をもらう", icon: "yensign.circle.fill")
                     RuleTip(text: "例：4人・掛け金20 → 勝つと+60、ほかの人は一人ずつ−20")
                 }
                 RuleCard(title: "サイド対抗（1対3など）", icon: "person.2.fill", accent: .blue) {
@@ -66,6 +66,15 @@ struct OtherRulesPage: View {
                     PointBadge(label: "予想より悪い（1打ごと）", points: "+2", positive: false)
                     RuleParagraph(text: "この点数は少ないほど勝ちです。正直に言うゲームなので「オネスト（正直）」ジョンといいます。")
                     RuleTip(text: "例：予想100で97 → 3点。予想100で105 → 10点。")
+                }
+
+                RuleSectionHeader(icon: "person.2.wave.2.fill", title: "個人にぎり", color: .mint)
+                RuleCard(title: "ネットの3本勝負", icon: "flag.2.crossed", accent: .mint) {
+                    RuleParagraph(text: "グロスからハンディを引いたネットでくらべます。設定で参加者を選び、ハンディと掛け金（既定100）を決めます。")
+                    RuleBullet(text: "前半・後半・全部の3本。それぞれ最少ネットの人が勝ち", icon: "3.circle.fill")
+                    RuleBullet(text: "勝ちはほかの参加者から掛け金をもらう。同点は引き分け", icon: "yensign.circle.fill")
+                    RuleBullet(text: "奇数ハンディは前半に1打多く（例: 11 → 前6 / 後5）", icon: "divide.circle.fill")
+                    RuleTip(text: "例：2人・掛け金100。前半勝ち・後半負け・全部勝ちなら +100。")
                 }
 
                 RuleSectionHeader(icon: "book.fill", title: "ゴルフの雑学", color: .gray)

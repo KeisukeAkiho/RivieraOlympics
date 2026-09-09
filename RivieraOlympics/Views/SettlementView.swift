@@ -83,7 +83,62 @@ struct SettlementView: View {
                         .font(.footnote.weight(.semibold))
                     }
 
-                    Section("ネット精算（全ゲーム）") {
+                    if r.options.nigiriEnabled {
+                        Section("個人にぎり（掛け金 \(r.options.nigiriStakeRate)）") {
+                            let nigiri = NigiriCalculator.run(round: r)
+                            Text("ネット = グロス − ハンディ（奇数打は前半へ）")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            ForEach(nigiri.segments) { seg in
+                                HStack {
+                                    Text(seg.segment.title)
+                                    Spacer()
+                                    if !seg.isComplete {
+                                        Text("未完了")
+                                            .foregroundStyle(.secondary)
+                                    } else if seg.isDraw {
+                                        Text("引き分け")
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        let names = r.players.filter { seg.winnerIds.contains($0.id) }.map(\.name).joined(separator: ", ")
+                                        Text(names.isEmpty ? "—" : names)
+                                            .fontWeight(.semibold)
+                                    }
+                                }
+                                .font(.subheadline)
+                            }
+                            ForEach(r.players) { p in
+                                if r.options.isNigiriParticipant(p.id) {
+                                    let nets = nigiri.netsByPlayer[p.id]
+                                    let y = nigiri.yen[p.id, default: 0]
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HStack {
+                                            Text(p.name)
+                                            Text("HCP \(r.options.nigiriHandicap(for: p.id))")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Spacer()
+                                            Text(yen(y))
+                                                .font(.body.monospacedDigit().weight(.bold))
+                                                .foregroundStyle(y >= 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                                        }
+                                        Text("前 \(netLabel(nets?.front)) · 後 \(netLabel(nets?.back)) · 全 \(netLabel(nets?.total))")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            let sumNigiri = r.players.reduce(0) { $0 + nigiri.yen[$1.id, default: 0] }
+                            HStack {
+                                Text("にぎり合計（検算）")
+                                Spacer()
+                                Text(yen(sumNigiri)).foregroundStyle(sumNigiri == 0 ? RivieraTheme.fairway : RivieraTheme.flag)
+                            }
+                            .font(.footnote.weight(.semibold))
+                        }
+                    }
+
+                    Section("ネット精算（全ゲーム · その他掛け金 \(r.options.gamesStakeRate)）") {
                         ForEach(summary.playerTotals) { t in
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack {
@@ -140,6 +195,12 @@ struct SettlementView: View {
                                     GridRow {
                                         Text("オネストジョン").foregroundStyle(.secondary)
                                         Text("\(t.honestJohnPoints) → \(yen(t.honestJohnYen))")
+                                    }
+                                    if r.options.nigiriEnabled {
+                                        GridRow {
+                                            Text("個人にぎり").foregroundStyle(.secondary)
+                                            Text(yen(t.nigiriYen))
+                                        }
                                     }
                                 }
                                 .font(.caption)
@@ -215,5 +276,10 @@ struct SettlementView: View {
         f.numberStyle = .decimal
         f.positivePrefix = "+"
         return f.string(from: NSNumber(value: v)) ?? "\(v)"
+    }
+
+    private func netLabel(_ value: Int?) -> String {
+        guard let value else { return "—" }
+        return "\(value)"
     }
 }

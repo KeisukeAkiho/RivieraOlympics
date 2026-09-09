@@ -341,7 +341,11 @@ struct SettlementExportCardView: View {
                 if !round.selectedTeeName.isEmpty {
                     Text("Tee \(round.selectedTeeName)")
                 }
-                Text("掛金 \(round.options.stakeRate)")
+                Text("五輪掛金 \(round.options.stakeRate)")
+                Text("その他掛金 \(round.options.gamesStakeRate)")
+                if round.options.nigiriEnabled {
+                    Text("にぎり掛金 \(round.options.nigiriStakeRate)")
+                }
                 if round.options.settlementCap > 0 {
                     Text("上限 \(round.options.settlementCap)")
                 }
@@ -578,6 +582,7 @@ struct SettlementExportCardView: View {
                 if round.options.sonchoEnabled { settleHead("村長¥", width: 66) }
                 if round.options.snakeEnabled { settleHead("蛇¥", width: 66) }
                 if round.options.honestJohnEnabled { settleHead("OJ¥", width: 66) }
+                if round.options.nigiriEnabled { settleHead("にぎり¥", width: 72) }
                 settleHead("ネット", width: 84)
             }
             ForEach(Array(summary.playerTotals.enumerated()), id: \.element.id) { index, t in
@@ -613,6 +618,9 @@ struct SettlementExportCardView: View {
                     }
                     if round.options.honestJohnEnabled {
                         settleCell(yen(t.honestJohnYen), width: 66, fg: moneyColor(t.honestJohnYen))
+                    }
+                    if round.options.nigiriEnabled {
+                        settleCell(yen(t.nigiriYen), width: 72, fg: moneyColor(t.nigiriYen))
                     }
                     settleCell(
                         yen(t.netYen),

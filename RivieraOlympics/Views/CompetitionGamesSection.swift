@@ -17,6 +17,7 @@ struct CompetitionGamesSection: View {
                 Toggle("蛇を9ホール毎に精算", isOn: $options.snakeSettlePerNine)
             }
             Toggle("オネストジョン", isOn: $options.honestJohnEnabled)
+            Toggle("個人にぎり", isOn: $options.nigiriEnabled)
             Toggle("ペナルティ", isOn: $options.penaltiesEnabled)
         } header: {
             Text("競技内容")
@@ -45,6 +46,7 @@ struct CompetitionGamesSection: View {
         if options.sonchoEnabled { names.append("村長") }
         if options.snakeEnabled { names.append("蛇") }
         if options.honestJohnEnabled { names.append("オネストジョン") }
+        if options.nigiriEnabled { names.append("個人にぎり") }
         return names
     }
 
@@ -127,6 +129,128 @@ struct HoleMatchSettingsSection: View {
             options.holeMatchSideA = [first.id]
             options.holeMatchSideB = players.dropFirst().map(\.id)
         }
+    }
+}
+
+/// 個人にぎり: 参加者・ハンディ・掛け金
+struct NigiriSettingsSection: View {
+    @Binding var options: RoundOptions
+    var players: [(id: UUID, name: String)]
+    var defaultHandicap: (UUID) -> Int = { _ in 0 }
+    var enabled: Bool = true
+
+    private let stakeChoices = [50, 100, 200, 500]
+
+    var body: some View {
+        if options.nigiriEnabled {
+            Section {
+                Text("現在の掛け金: \(max(1, options.nigiriStakeRate))")
+                    .font(.headline)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 8)], spacing: 8) {
+                    ForEach(displayStakeChoices, id: \.self) { rate in
+                        let selected = options.nigiriStakeRate == rate
+                        Button {
+                            options.nigiriStakeRate = rate
+                        } label: {
+                            Text("\(rate)")
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                                .background(selected ? RivieraTheme.fairway.opacity(0.22) : Color(.tertiarySystemFill))
+                                .foregroundStyle(selected ? RivieraTheme.fairway : .primary)
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(selected ? RivieraTheme.fairway : Color.clear, lineWidth: 1.5)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!enabled)
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+
+                Stepper(
+                    "掛け金 \(max(1, options.nigiriStakeRate))",
+                    value: Binding(
+                        get: { max(1, options.nigiriStakeRate) },
+                        set: { options.nigiriStakeRate = max(1, $0) }
+                    ),
+                    in: 1...10_000,
+                    step: 10
+                )
+                .disabled(!enabled)
+            } header: {
+                Text("個人にぎり 掛け金")
+            } footer: {
+                Text("既定は100。オリンピック・その他ゲームの掛け金とは別です。")
+            }
+
+            Section {
+                if players.isEmpty {
+                    Text("先に参加プレイヤーを選んでください。")
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(players, id: \.id) { player in
+                        VStack(alignment: .leading, spacing: 6) {
+                            Toggle(player.name, isOn: includedBinding(player.id))
+                                .disabled(!enabled)
+                            if options.isNigiriParticipant(player.id) {
+                                Stepper(
+                                    "ハンディ \(options.nigiriHandicap(for: player.id))（前\(frontHcp(player.id)) / 後\(backHcp(player.id))）",
+                                    value: handicapBinding(player.id),
+                                    in: 0...54
+                                )
+                                .disabled(!enabled)
+                            }
+                        }
+                    }
+                }
+            } header: {
+                Text("個人にぎり 参加者")
+            } footer: {
+                Text("ネット＝グロス−ハンディ。奇数打は前半へ（例: 11→前6/後5）。前半・後半・全部で最少ネットが1人なら勝ち、ほかの人から掛け金。同点は引き分け。2人以上選んでください。")
+            }
+            .onAppear { prune() }
+            .onChange(of: players.map(\.id)) { _, _ in prune() }
+        }
+    }
+
+    private var displayStakeChoices: [Int] {
+        var set = Set(stakeChoices)
+        if options.nigiriStakeRate > 0 {
+            set.insert(options.nigiriStakeRate)
+        }
+        return set.sorted()
+    }
+
+    private func frontHcp(_ playerId: UUID) -> Int {
+        NigiriCalculator.handicap(total: options.nigiriHandicap(for: playerId), for: .front)
+    }
+
+    private func backHcp(_ playerId: UUID) -> Int {
+        NigiriCalculator.handicap(total: options.nigiriHandicap(for: playerId), for: .back)
+    }
+
+    private func includedBinding(_ playerId: UUID) -> Binding<Bool> {
+        Binding(
+            get: { options.isNigiriParticipant(playerId) },
+            set: { on in
+                options.setNigiriParticipant(playerId, included: on, defaultHandicap: defaultHandicap(playerId))
+            }
+        )
+    }
+
+    private func handicapBinding(_ playerId: UUID) -> Binding<Int> {
+        Binding(
+            get: { options.nigiriHandicap(for: playerId) },
+            set: { options.setNigiriHandicap(playerId, handicap: $0) }
+        )
+    }
+
+    private func prune() {
+        options.pruneNigiriParticipants(validIds: Set(players.map(\.id)))
     }
 }
 

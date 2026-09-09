@@ -55,7 +55,7 @@ enum LasVegasCalculator {
 
     static func yenByPlayer(round: GolfRound) -> [UUID: Int] {
         guard round.options.lasVegasEnabled else { return [:] }
-        let stake = round.options.stakeRate
+        let stake = round.options.gamesStakeRate
         var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
         for hole in round.holes.sorted(by: { $0.holeNumber < $1.holeNumber }) {
             let teams = teams(forHole: hole.holeNumber, round: round)
@@ -200,7 +200,7 @@ enum HoleMatchCalculator {
     }
 
     static func yenByPlayer(round: GolfRound) -> [UUID: Int] {
-        let stake = round.options.stakeRate
+        let stake = round.options.gamesStakeRate
         var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
         let participants = participatingIds(round: round)
         guard !participants.isEmpty else { return map }
@@ -287,7 +287,7 @@ enum HoleMatchCalculator {
     }
 }
 
-/// 村長: each player ante `stakeRate`; worst (highest) gross takes the pot.
+/// 村長: each player ante `gamesStakeRate`; worst (highest) gross takes the pot.
 enum SonchoCalculator {
     static func grossByPlayer(round: GolfRound) -> [UUID: Int] {
         var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
@@ -311,7 +311,7 @@ enum SonchoCalculator {
         guard round.options.sonchoEnabled else { return [:] }
         let winners = winnerIds(round: round)
         guard !winners.isEmpty else { return [:] }
-        let stake = round.options.stakeRate
+        let stake = round.options.gamesStakeRate
         let n = round.players.count
         let pot = stake * n
         var map: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, -stake) })
@@ -337,7 +337,7 @@ enum SnakeCalculator {
         guard round.options.snakeEnabled else {
             return Run(segments: [], yen: [:])
         }
-        let stake = round.options.stakeRate
+        let stake = round.options.gamesStakeRate
         var yen: [UUID: Int] = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
         var segments: [SnakeSegmentResult] = []
 
@@ -433,7 +433,7 @@ enum HonestJohnCalculator {
         let rows = results(round: round).filter { $0.actual > 0 }
         guard !rows.isEmpty else { return [:] }
         let avg = Double(rows.reduce(0) { $0 + $1.points }) / Double(rows.count)
-        let stake = Double(round.options.stakeRate)
+        let stake = Double(round.options.gamesStakeRate)
         var map: [UUID: Int] = [:]
         for r in rows {
             map[r.playerId] = Int(((avg - Double(r.points)) * stake).rounded())
@@ -444,6 +444,149 @@ enum HonestJohnCalculator {
             map[first, default: 0] -= drift
         }
         return map
+    }
+}
+
+/// 個人にぎり: ネット（グロス − ハンディ）で前半・後半・全部の3本を個人対抗。
+enum NigiriCalculator {
+    enum Segment: String, CaseIterable, Identifiable {
+        case front, back, total
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .front: return "前半"
+            case .back: return "後半"
+            case .total: return "全部"
+            }
+        }
+
+        var holes: ClosedRange<Int> {
+            switch self {
+            case .front: return 1...9
+            case .back: return 10...18
+            case .total: return 1...18
+            }
+        }
+    }
+
+    struct SegmentResult: Identifiable, Equatable {
+        var segment: Segment
+        var nets: [UUID: Int]
+        var winnerIds: [UUID]
+        var isDraw: Bool
+        var isComplete: Bool
+
+        var id: String { segment.rawValue }
+    }
+
+    struct PlayerNets: Equatable {
+        var front: Int?
+        var back: Int?
+        var total: Int?
+    }
+
+    struct Run: Equatable {
+        var segments: [SegmentResult]
+        var yen: [UUID: Int]
+        var netsByPlayer: [UUID: PlayerNets]
+    }
+
+    static func parseHandicap(_ raw: String) -> Int {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let i = Int(trimmed) { return max(0, min(54, i)) }
+        let leading = String(trimmed.prefix { $0.isNumber || $0 == "." })
+        if let d = Double(leading) { return max(0, min(54, Int(d.rounded()))) }
+        return 0
+    }
+
+    /// 奇数打は前半へ（例: 11 → 前6 / 後5）
+    static func handicap(total: Int, for segment: Segment) -> Int {
+        let h = max(0, total)
+        switch segment {
+        case .front: return (h + 1) / 2
+        case .back: return h / 2
+        case .total: return h
+        }
+    }
+
+    static func run(round: GolfRound) -> Run {
+        let emptyYen = Dictionary(uniqueKeysWithValues: round.players.map { ($0.id, 0) })
+        guard round.options.nigiriEnabled else {
+            return Run(segments: [], yen: emptyYen, netsByPlayer: [:])
+        }
+        let valid = Set(round.players.map(\.id))
+        let participants = round.options.nigiriParticipants.filter { valid.contains($0.playerId) }
+        var yen = emptyYen
+        var netsByPlayer: [UUID: PlayerNets] = [:]
+        for p in participants {
+            netsByPlayer[p.playerId] = PlayerNets(
+                front: netScore(round: round, playerId: p.playerId, handicap: p.handicap, segment: .front),
+                back: netScore(round: round, playerId: p.playerId, handicap: p.handicap, segment: .back),
+                total: netScore(round: round, playerId: p.playerId, handicap: p.handicap, segment: .total)
+            )
+        }
+
+        var segments: [SegmentResult] = []
+        let stake = max(1, round.options.nigiriStakeRate)
+        for segment in Segment.allCases {
+            var nets: [UUID: Int] = [:]
+            for p in participants {
+                if let net = netScore(round: round, playerId: p.playerId, handicap: p.handicap, segment: segment) {
+                    nets[p.playerId] = net
+                }
+            }
+            let ids = Array(nets.keys)
+            var winnerIds: [UUID] = []
+            var isDraw = false
+            let isComplete = ids.count >= 2
+            if isComplete, let best = nets.values.min() {
+                winnerIds = ids.filter { nets[$0] == best }
+                isDraw = winnerIds.count != 1
+                if winnerIds.count == 1, let winner = winnerIds.first {
+                    for other in ids where other != winner {
+                        yen[winner, default: 0] += stake
+                        yen[other, default: 0] -= stake
+                    }
+                }
+            }
+            segments.append(
+                SegmentResult(
+                    segment: segment,
+                    nets: nets,
+                    winnerIds: winnerIds,
+                    isDraw: isDraw,
+                    isComplete: isComplete
+                )
+            )
+        }
+        return Run(segments: segments, yen: yen, netsByPlayer: netsByPlayer)
+    }
+
+    static func yenByPlayer(round: GolfRound) -> [UUID: Int] {
+        run(round: round).yen
+    }
+
+    static func netScore(round: GolfRound, playerId: UUID, handicap: Int, segment: Segment) -> Int? {
+        guard let gross = completedGross(round: round, playerId: playerId, holes: segment.holes) else {
+            return nil
+        }
+        return gross - Self.handicap(total: handicap, for: segment)
+    }
+
+    private static func completedGross(round: GolfRound, playerId: UUID, holes: ClosedRange<Int>) -> Int? {
+        var total = 0
+        for n in holes {
+            guard let hole = round.holes.first(where: { $0.holeNumber == n }),
+                  let entry = hole.entries.first(where: { $0.playerId == playerId }),
+                  entry.strokes > 0
+            else {
+                return nil
+            }
+            total += entry.strokes
+        }
+        return total
     }
 }
 
@@ -465,8 +608,10 @@ enum SettlementEngine {
         let snake = SnakeCalculator.run(round: round)
         let hj = HonestJohnCalculator.results(round: round)
         let hjYen = HonestJohnCalculator.yenByPlayer(round: round)
+        let nigiri = NigiriCalculator.run(round: round)
         let gross = SonchoCalculator.grossByPlayer(round: round)
-        let stake = round.options.stakeRate
+        let olympicsStake = round.options.stakeRate
+        let gamesStake = round.options.gamesStakeRate
 
         var notes: [String] = []
         if !round.options.penaltiesEnabled {
@@ -483,6 +628,23 @@ enum SettlementEngine {
             let names = round.players.filter { excluded.contains($0.id) }.map(\.name).joined(separator: ", ")
             notes.append("オリンピック精算から除外: \(names)")
         }
+        if olympicsStake != gamesStake {
+            notes.append("掛け金: オリンピック \(olympicsStake) / その他ゲーム \(gamesStake)")
+        }
+        if round.options.nigiriEnabled {
+            let names = round.players.filter { round.options.isNigiriParticipant($0.id) }.map(\.name)
+            if names.count < 2 {
+                notes.append("個人にぎり: 参加者が2人未満です")
+            } else {
+                let parts = nigiri.segments.map { seg in
+                    if !seg.isComplete { return "\(seg.segment.title) 未完了" }
+                    if seg.isDraw { return "\(seg.segment.title) 引き分け" }
+                    let winners = round.players.filter { seg.winnerIds.contains($0.id) }.map(\.name).joined(separator: ", ")
+                    return "\(seg.segment.title) \(winners)"
+                }
+                notes.append("個人にぎり（掛け金 \(round.options.nigiriStakeRate)）: " + parts.joined(separator: " / "))
+            }
+        }
 
         let n = participants.count
         let sumOlympic = participants.reduce(0) { $0 + olympicTotals[$1.id, default: 0] }
@@ -497,14 +659,15 @@ enum SettlementEngine {
                 // 検算: (自分点×精算人数) − 精算対象の合計 → 対象者だけで合計0
                 olympicUnits = op * n - sumOlympic
             }
-            let olympicYen = olympicUnits * stake
+            let olympicYen = olympicUnits * olympicsStake
             let holeYen = hm[player.id, default: 0]
             let lvYen = lv[player.id, default: 0]
             let sonchoYen = soncho[player.id, default: 0]
             let snakeYen = snake.yen[player.id, default: 0]
             let hjPoints = hj.first(where: { $0.playerId == player.id })?.points ?? 0
             let honestYen = hjYen[player.id, default: 0]
-            var net = olympicYen + holeYen + lvYen + sonchoYen + snakeYen + honestYen
+            let nigiriYen = nigiri.yen[player.id, default: 0]
+            var net = olympicYen + holeYen + lvYen + sonchoYen + snakeYen + honestYen + nigiriYen
 
             if round.options.settlementCap > 0 {
                 let cap = round.options.settlementCap
@@ -531,6 +694,7 @@ enum SettlementEngine {
                 snakeYen: snakeYen,
                 honestJohnPoints: hjPoints,
                 honestJohnYen: honestYen,
+                nigiriYen: nigiriYen,
                 isSoncho: sonchoWinners.contains(player.id),
                 netYen: net,
                 olympicsSettlementExcluded: excludedFromOlympics && round.options.olympicsEnabled

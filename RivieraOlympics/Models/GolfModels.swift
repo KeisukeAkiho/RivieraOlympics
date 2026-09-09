@@ -237,6 +237,14 @@ extension Player: Codable {
     }
 }
 
+/// 個人にぎりの参加者と、このラウンド用ハンディ（18ホール）
+struct NigiriParticipant: Identifiable, Equatable, Codable {
+    var playerId: UUID
+    var handicap: Int = 0
+
+    var id: UUID { playerId }
+}
+
 enum HoleMatchMode: String, Codable, CaseIterable, Identifiable {
     case allPlayAll
     case sides
@@ -261,7 +269,10 @@ enum HoleMatchMode: String, Codable, CaseIterable, Identifiable {
 }
 
 struct RoundOptions: Equatable {
+    /// オリンピック精算の掛け金（JSON: `stakeRate`）
     var stakeRate: Int = 20
+    /// ホールマッチ・ラスベガス・村長・蛇・オネストジョンの掛け金
+    var gamesStakeRate: Int = 20
     var settlementCap: Int = 0
     var penaltiesEnabled: Bool = true
     var olympicsEnabled: Bool = true
@@ -274,6 +285,10 @@ struct RoundOptions: Equatable {
     var snakeEnabled: Bool = false
     var snakeSettlePerNine: Bool = true
     var honestJohnEnabled: Bool = false
+    /// 個人にぎり（ネットの前半・後半・全部）
+    var nigiriEnabled: Bool = false
+    var nigiriStakeRate: Int = 100
+    var nigiriParticipants: [NigiriParticipant] = []
     var lasVegasTeamA: [UUID] = []
     var lasVegasTeamB: [UUID] = []
     var olympicsPoints: OlympicsPointRules = .rivieraDefault
@@ -298,6 +313,35 @@ struct RoundOptions: Equatable {
         }
     }
 
+    func isNigiriParticipant(_ playerId: UUID) -> Bool {
+        nigiriParticipants.contains { $0.playerId == playerId }
+    }
+
+    func nigiriHandicap(for playerId: UUID) -> Int {
+        nigiriParticipants.first(where: { $0.playerId == playerId })?.handicap ?? 0
+    }
+
+    mutating func setNigiriParticipant(_ playerId: UUID, included: Bool, defaultHandicap: Int = 0) {
+        if included {
+            if !nigiriParticipants.contains(where: { $0.playerId == playerId }) {
+                nigiriParticipants.append(
+                    NigiriParticipant(playerId: playerId, handicap: max(0, min(54, defaultHandicap)))
+                )
+            }
+        } else {
+            nigiriParticipants.removeAll { $0.playerId == playerId }
+        }
+    }
+
+    mutating func setNigiriHandicap(_ playerId: UUID, handicap: Int) {
+        guard let i = nigiriParticipants.firstIndex(where: { $0.playerId == playerId }) else { return }
+        nigiriParticipants[i].handicap = max(0, min(54, handicap))
+    }
+
+    mutating func pruneNigiriParticipants(validIds: Set<UUID>) {
+        nigiriParticipants.removeAll { !validIds.contains($0.playerId) }
+    }
+
     mutating func applyRulePreset(_ preset: NamedGameRulePreset) {
         olympicsPoints = preset.olympicsPoints
         customPointRules = preset.customPointRules
@@ -308,10 +352,11 @@ struct RoundOptions: Equatable {
 
 extension RoundOptions: Codable {
     enum CodingKeys: String, CodingKey {
-        case stakeRate, settlementCap, penaltiesEnabled, olympicsEnabled
+        case stakeRate, gamesStakeRate, settlementCap, penaltiesEnabled, olympicsEnabled
         case lasVegasEnabled, holeMatchEnabled
         case holeMatchMode, holeMatchSideA, holeMatchSideB
         case sonchoEnabled, snakeEnabled, snakeSettlePerNine, honestJohnEnabled
+        case nigiriEnabled, nigiriStakeRate, nigiriParticipants
         case lasVegasTeamA, lasVegasTeamB
         case olympicsPoints, customPointRules, lasVegasRules, activeRulePresetId
         case olympicsExcludedPlayerIds
@@ -320,6 +365,8 @@ extension RoundOptions: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         stakeRate = try c.decodeIfPresent(Int.self, forKey: .stakeRate) ?? 20
+        // 旧データはオリンピックと同じ掛け金をその他ゲームにも使う
+        gamesStakeRate = try c.decodeIfPresent(Int.self, forKey: .gamesStakeRate) ?? stakeRate
         settlementCap = try c.decodeIfPresent(Int.self, forKey: .settlementCap) ?? 0
         penaltiesEnabled = try c.decodeIfPresent(Bool.self, forKey: .penaltiesEnabled) ?? true
         olympicsEnabled = try c.decodeIfPresent(Bool.self, forKey: .olympicsEnabled) ?? true
@@ -332,6 +379,9 @@ extension RoundOptions: Codable {
         snakeEnabled = try c.decodeIfPresent(Bool.self, forKey: .snakeEnabled) ?? false
         snakeSettlePerNine = try c.decodeIfPresent(Bool.self, forKey: .snakeSettlePerNine) ?? true
         honestJohnEnabled = try c.decodeIfPresent(Bool.self, forKey: .honestJohnEnabled) ?? false
+        nigiriEnabled = try c.decodeIfPresent(Bool.self, forKey: .nigiriEnabled) ?? false
+        nigiriStakeRate = try c.decodeIfPresent(Int.self, forKey: .nigiriStakeRate) ?? 100
+        nigiriParticipants = try c.decodeIfPresent([NigiriParticipant].self, forKey: .nigiriParticipants) ?? []
         lasVegasTeamA = try c.decodeIfPresent([UUID].self, forKey: .lasVegasTeamA) ?? []
         lasVegasTeamB = try c.decodeIfPresent([UUID].self, forKey: .lasVegasTeamB) ?? []
         olympicsPoints = try c.decodeIfPresent(OlympicsPointRules.self, forKey: .olympicsPoints) ?? .rivieraDefault
@@ -339,6 +389,34 @@ extension RoundOptions: Codable {
         lasVegasRules = try c.decodeIfPresent(LasVegasRules.self, forKey: .lasVegasRules) ?? .default
         activeRulePresetId = try c.decodeIfPresent(UUID.self, forKey: .activeRulePresetId)
         olympicsExcludedPlayerIds = try c.decodeIfPresent([UUID].self, forKey: .olympicsExcludedPlayerIds) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(stakeRate, forKey: .stakeRate)
+        try c.encode(gamesStakeRate, forKey: .gamesStakeRate)
+        try c.encode(settlementCap, forKey: .settlementCap)
+        try c.encode(penaltiesEnabled, forKey: .penaltiesEnabled)
+        try c.encode(olympicsEnabled, forKey: .olympicsEnabled)
+        try c.encode(lasVegasEnabled, forKey: .lasVegasEnabled)
+        try c.encode(holeMatchEnabled, forKey: .holeMatchEnabled)
+        try c.encode(holeMatchMode, forKey: .holeMatchMode)
+        try c.encode(holeMatchSideA, forKey: .holeMatchSideA)
+        try c.encode(holeMatchSideB, forKey: .holeMatchSideB)
+        try c.encode(sonchoEnabled, forKey: .sonchoEnabled)
+        try c.encode(snakeEnabled, forKey: .snakeEnabled)
+        try c.encode(snakeSettlePerNine, forKey: .snakeSettlePerNine)
+        try c.encode(honestJohnEnabled, forKey: .honestJohnEnabled)
+        try c.encode(nigiriEnabled, forKey: .nigiriEnabled)
+        try c.encode(nigiriStakeRate, forKey: .nigiriStakeRate)
+        try c.encode(nigiriParticipants, forKey: .nigiriParticipants)
+        try c.encode(lasVegasTeamA, forKey: .lasVegasTeamA)
+        try c.encode(lasVegasTeamB, forKey: .lasVegasTeamB)
+        try c.encode(olympicsPoints, forKey: .olympicsPoints)
+        try c.encode(customPointRules, forKey: .customPointRules)
+        try c.encode(lasVegasRules, forKey: .lasVegasRules)
+        try c.encodeIfPresent(activeRulePresetId, forKey: .activeRulePresetId)
+        try c.encode(olympicsExcludedPlayerIds, forKey: .olympicsExcludedPlayerIds)
     }
 }
 
@@ -378,6 +456,16 @@ struct PlayerHoleEntry: Identifiable, Equatable {
     var customActiveRuleIds: [UUID] = []
     /// Button-recorded history (reach, name lick, etc.). Independent of stroke score.
     var eventLog: [OlympicEventRecord] = []
+
+    mutating func ensureUniqueEventLogIds() {
+        var seen = Set<UUID>()
+        for i in eventLog.indices {
+            if seen.contains(eventLog[i].id) {
+                eventLog[i].id = UUID()
+            }
+            seen.insert(eventLog[i].id)
+        }
+    }
 }
 
 /// Named Olympics event recorded from the score sheet (not a stroke).
@@ -636,7 +724,7 @@ struct PointLine: Identifiable, Codable, Equatable {
     var multipliedByReach: Bool = false
 
     /// Stable identity so SwiftUI ForEach does not churn on every preview recalculation.
-    var id: String { code }
+    var id: String { "\(code)|\(label)|\(points)|\(multipliedByReach)" }
 }
 
 struct PlayerHoleOlympicsResult: Codable, Equatable {
@@ -669,6 +757,7 @@ struct PlayerTotals: Identifiable, Equatable {
     var snakeYen: Int
     var honestJohnPoints: Int
     var honestJohnYen: Int
+    var nigiriYen: Int = 0
     var isSoncho: Bool
     var netYen: Int
     var olympicsSettlementExcluded: Bool = false
@@ -678,7 +767,7 @@ extension PlayerTotals: Codable {
     enum CodingKeys: String, CodingKey {
         case playerId, name, grossScore, olympicPoints, olympicUnits
         case holeMatchWins, holeMatchYen, lasVegasYen, olympicYen
-        case sonchoYen, snakeYen, honestJohnPoints, honestJohnYen, isSoncho, netYen
+        case sonchoYen, snakeYen, honestJohnPoints, honestJohnYen, nigiriYen, isSoncho, netYen
         case olympicsSettlementExcluded
     }
 
@@ -697,6 +786,7 @@ extension PlayerTotals: Codable {
         snakeYen = try c.decodeIfPresent(Int.self, forKey: .snakeYen) ?? 0
         honestJohnPoints = try c.decodeIfPresent(Int.self, forKey: .honestJohnPoints) ?? 0
         honestJohnYen = try c.decodeIfPresent(Int.self, forKey: .honestJohnYen) ?? 0
+        nigiriYen = try c.decodeIfPresent(Int.self, forKey: .nigiriYen) ?? 0
         isSoncho = try c.decodeIfPresent(Bool.self, forKey: .isSoncho) ?? false
         netYen = try c.decodeIfPresent(Int.self, forKey: .netYen) ?? 0
         olympicsSettlementExcluded = try c.decodeIfPresent(Bool.self, forKey: .olympicsSettlementExcluded) ?? false

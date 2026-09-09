@@ -71,6 +71,11 @@ struct ScorecardTablesView: View {
                                         sectionDivider(title: "オネストジョン（申告差／精算¥）")
                                         honestJohnBlock(round: round)
                                     }
+
+                                    if round.options.nigiriEnabled {
+                                        sectionDivider(title: "個人にぎり（ネット 前半・後半・全部／精算¥）")
+                                        nigiriBlock(round: round)
+                                    }
                                 }
                             }
                         }
@@ -87,12 +92,16 @@ struct ScorecardTablesView: View {
                         teeName: live.selectedTeeName,
                         round: live,
                         onCommit: {
-                            commitHoleEntries(hole: target.holeNumber, entriesByPlayer: scoreDraft)
+                            let hole = target.holeNumber
+                            let draft = scoreDraft
                             scoreHoleTarget = nil
+                            Task { @MainActor in
+                                commitHoleEntries(hole: hole, entriesByPlayer: draft)
+                            }
                         },
                         onCancel: { scoreHoleTarget = nil }
                     )
-                    .presentationDetents([.large, .medium])
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
                 }
                 .confirmationDialog(
@@ -236,6 +245,10 @@ struct ScorecardTablesView: View {
             if round.options.honestJohnEnabled {
                 sectionDivider(title: " ").frame(width: nameWidth)
                 stickyPlayerSection(title: "OJ", tint: Color.teal.opacity(0.12), round: round)
+            }
+            if round.options.nigiriEnabled {
+                sectionDivider(title: " ").frame(width: nameWidth)
+                stickyPlayerSection(title: "にぎり", tint: Color.mint.opacity(0.14), round: round)
             }
         }
         .background(Color(.secondarySystemBackground))
@@ -504,7 +517,7 @@ struct ScorecardTablesView: View {
                     .foregroundStyle(points < 0 ? RivieraTheme.flag : (points > 0 ? RivieraTheme.fairway : .primary))
             } else {
                 HStack(spacing: 1) {
-                    ForEach(icons.prefix(3), id: \.self) { icon in
+                    ForEach(Array(icons.prefix(3).enumerated()), id: \.offset) { _, icon in
                         Image(systemName: icon)
                             .font(.system(size: 8))
                             .foregroundStyle(RivieraTheme.fairway)
@@ -989,6 +1002,65 @@ struct ScorecardTablesView: View {
         }
     }
 
+    private func nigiriBlock(round: GolfRound) -> some View {
+        let run = NigiriCalculator.run(round: round)
+        let frontWinners = Set(run.segments.first(where: { $0.segment == .front })?.winnerIds ?? [])
+        let backWinners = Set(run.segments.first(where: { $0.segment == .back })?.winnerIds ?? [])
+        let totalWinners = Set(run.segments.first(where: { $0.segment == .total })?.winnerIds ?? [])
+        let nineTint = Color.mint.opacity(0.22)
+        return VStack(spacing: 0) {
+            nineSplitHeaderRow(
+                holeTint: Color.mint.opacity(0.12),
+                nineTint: nineTint,
+                totalTint: Color.mint.opacity(0.28)
+            )
+            ForEach(round.players) { p in
+                let participating = round.options.isNigiriParticipant(p.id)
+                let nets = run.netsByPlayer[p.id]
+                HStack(spacing: 0) {
+                    ForEach(1...9, id: \.self) { h in
+                        let s = strokes(round: round, playerId: p.id, hole: h)
+                        cellText(participating && s > 0 ? "\(s)" : "·", bold: false, width: cellWidth, height: cellHeight)
+                            .foregroundStyle(participating ? .primary : .secondary)
+                    }
+                    cellText(
+                        nigiriNetLabel(nets?.front, won: frontWinners.contains(p.id)),
+                        bold: true,
+                        width: cellWidth,
+                        height: cellHeight
+                    )
+                    .background(frontWinners.contains(p.id) ? Color.mint.opacity(0.35) : nineTint.opacity(0.55))
+                    ForEach(10...18, id: \.self) { h in
+                        let s = strokes(round: round, playerId: p.id, hole: h)
+                        cellText(participating && s > 0 ? "\(s)" : "·", bold: false, width: cellWidth, height: cellHeight)
+                            .foregroundStyle(participating ? .primary : .secondary)
+                    }
+                    cellText(
+                        nigiriNetLabel(nets?.back, won: backWinners.contains(p.id)),
+                        bold: true,
+                        width: cellWidth,
+                        height: cellHeight
+                    )
+                    .background(backWinners.contains(p.id) ? Color.mint.opacity(0.35) : nineTint.opacity(0.55))
+                    let y = run.yen[p.id, default: 0]
+                    let totalText: String = {
+                        guard participating else { return "—" }
+                        let net = nigiriNetLabel(nets?.total, won: totalWinners.contains(p.id))
+                        return "\(net)/\(compactYen(y))"
+                    }()
+                    cellText(totalText, bold: true, width: cellWidth, height: cellHeight)
+                        .foregroundStyle(participating && y != 0 ? (y >= 0 ? RivieraTheme.fairway : RivieraTheme.flag) : .primary)
+                        .background(totalWinners.contains(p.id) ? Color.mint.opacity(0.40) : Color(.tertiarySystemFill))
+                }
+            }
+        }
+    }
+
+    private func nigiriNetLabel(_ net: Int?, won: Bool) -> String {
+        guard let net else { return "—" }
+        return won ? "勝\(net)" : "\(net)"
+    }
+
     private func rangeSum(_ values: [Int], holes: ClosedRange<Int>) -> Int {
         holes.reduce(0) { sum, h in
             let idx = h - 1
@@ -1058,8 +1130,10 @@ struct ScorecardTablesView: View {
             }
             if let ei = r.holes[hi].entries.firstIndex(where: { $0.playerId == player.id }) {
                 saved.id = r.holes[hi].entries[ei].id
+                saved.ensureUniqueEventLogIds()
                 r.holes[hi].entries[ei] = saved
             } else {
+                saved.ensureUniqueEventLogIds()
                 r.holes[hi].entries.append(saved)
             }
         }
